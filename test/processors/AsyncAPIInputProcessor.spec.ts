@@ -130,5 +130,40 @@ describe('AsyncAPIInputProcessor', () => {
       expect(expected.anyOf[1]['x-modelgen-inferred-name']).toEqual('<anonymous-schema-17>');
       expect(expected.anyOf[1].properties.prop['x-modelgen-inferred-name']).toEqual('<anonymous-schema-18>');
     });
+
+    test('should convert schemas referenced more than once', async () => {
+      const doc = await parse(JSON.stringify({
+        asyncapi: '2.0.0',
+        info: {title: 'test', version: '1.0.0'},
+        channels: {
+          test: {
+            subscribe: {
+              message: {payload: {$ref: '#/components/schemas/RootSchema'}}
+            }
+          }
+        },
+        components: {
+          schemas: {
+            RootSchema: {
+              type: 'object',
+              properties: {
+                firstRef: {$ref: '#/components/schemas/ReferencedSchema'},
+                secondRef: {$ref: '#/components/schemas/ReferencedSchema'}
+              }
+            },
+            ReferencedSchema: {
+              type: 'object',
+              properties: {str: {type: 'string'}}
+            }
+          }
+        }
+      }), {} as ParserOptions);
+      const schema = doc.channels()['test'].subscribe().message().payload();
+      const converted = AsyncAPIInputProcessor.convertToInternalSchema(schema) as any;
+      expect(converted.properties.firstRef.type).toEqual('object');
+      expect(converted.properties.secondRef.type).toEqual('object');
+      expect(converted.properties.secondRef.properties.str.type).toEqual('string');
+      expect(converted.properties.secondRef).toBe(converted.properties.firstRef);
+    });
   });
 });
