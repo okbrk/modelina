@@ -1,52 +1,40 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { AnyModel, CommonModel } from '../../src/models';
-import { SwaggerInputProcessor } from '../../src/processors/SwaggerInputProcessor';
-import { JsonSchemaInputProcessor } from '../../src';
-const basicDoc = JSON.parse(
-  fs.readFileSync(
-    path.resolve(__dirname, './SwaggerInputProcessor/basic.json'),
-    'utf8'
-  )
-);
-const circularDoc = JSON.parse(
-  fs.readFileSync(
-    path.resolve(__dirname, './SwaggerInputProcessor/references_circular.json'),
-    'utf8'
-  )
-);
+import { CommonModel } from '../../src/models';
+import {SwaggerInputProcessor} from '../../src/processors/SwaggerInputProcessor';
+const basicDoc = JSON.parse(fs.readFileSync(path.resolve(__dirname, './SwaggerInputProcessor/basic.json'), 'utf8'));
+jest.mock('../../src/interpreter/Interpreter');
+jest.mock('../../src/interpreter/PostInterpreter');
 jest.mock('../../src/utils/LoggingInterface');
 jest.spyOn(SwaggerInputProcessor, 'convertToInternalSchema');
-const mockedReturnModels = [new CommonModel()];
-const mockedMetaModel = new AnyModel('', undefined, {});
 
+const mockedReturnModels = [new CommonModel()];
 jest.mock('../../src/interpreter/Interpreter', () => {
   return {
     Interpreter: jest.fn().mockImplementation(() => {
       return {
-        interpret: jest.fn().mockImplementation(() => {
-          return mockedReturnModels[0];
-        })
+        interpret: jest.fn().mockImplementation(() => {return mockedReturnModels[0];})
       };
     })
   };
 });
-
+jest.mock('../../src/interpreter/PostInterpreter', () => {
+  return {
+    postInterpretModel: jest.fn().mockImplementation(() => {return mockedReturnModels;})
+  };
+});
 describe('SwaggerInputProcessor', () => {
-  beforeEach(() => {
-    jest.resetAllMocks();
-  });
   afterAll(() => {
     jest.restoreAllMocks();
   });
   describe('shouldProcess()', () => {
     const processor = new SwaggerInputProcessor();
     test('should be able to process Swagger 2.0', () => {
-      const parsedObject = { swagger: '2.0' };
+      const parsedObject = {swagger: '2.0'};
       expect(processor.shouldProcess(parsedObject)).toEqual(true);
     });
     test('should not be able to process other swagger docs', () => {
-      const parsedObject = { swagger: '1.0' };
+      const parsedObject = {swagger: '1.0'};
       expect(processor.shouldProcess(parsedObject)).toEqual(false);
     });
     test('should not be able to process document without swagger version', () => {
@@ -67,39 +55,15 @@ describe('SwaggerInputProcessor', () => {
   describe('process()', () => {
     test('should throw error when trying to process wrong schema', async () => {
       const processor = new SwaggerInputProcessor();
-      await expect(processor.process({})).rejects.toThrow(
-        'Input is not a Swagger document so it cannot be processed.'
-      );
+      await expect(processor.process({}))
+        .rejects
+        .toThrow('Input is not a Swagger document so it cannot be processed.');
     });
     test('should process the swagger document accurately', async () => {
-      JsonSchemaInputProcessor.convertSchemaToMetaModel = jest
-        .fn()
-        .mockImplementation(() => {
-          return mockedMetaModel;
-        });
       const processor = new SwaggerInputProcessor();
       const commonInputModel = await processor.process(basicDoc);
       expect(commonInputModel).toMatchSnapshot();
-      expect(
-        (
-          SwaggerInputProcessor.convertToInternalSchema as any as jest.SpyInstance
-        ).mock.calls
-      ).toMatchSnapshot();
-    });
-    test('should be able to use $ref when circular', async () => {
-      JsonSchemaInputProcessor.convertSchemaToMetaModel = jest
-        .fn()
-        .mockImplementation(() => {
-          return mockedMetaModel;
-        });
-      const processor = new SwaggerInputProcessor();
-      const commonInputModel = await processor.process(circularDoc);
-      expect(commonInputModel).toMatchSnapshot();
-      expect(
-        (
-          SwaggerInputProcessor.convertToInternalSchema as any as jest.SpyInstance
-        ).mock.calls
-      ).toMatchSnapshot();
+      expect((SwaggerInputProcessor.convertToInternalSchema as any as jest.SpyInstance).mock.calls).toMatchSnapshot();
     });
   });
 });

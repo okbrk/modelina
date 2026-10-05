@@ -1,41 +1,25 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`Marshalling preset should render un/marshal code 1`] = `
-"class Test {
+"export class Test {
   private _stringProp: string;
   private _enumProp?: EnumTest;
   private _numberProp?: number;
-  private _nestedObject?: NestedTest;
-  private _unionTest?: NestedTest | string;
-  private _unionArrayTest?: (NestedTest | string)[];
-  private _arrayTest?: NestedTest[];
-  private _primitiveArrayTest?: string[];
-  private _tupleTest?: [NestedTest, string];
-  private _constTest?: 'TEST' = 'TEST';
-  private _additionalProperties?: Map<string, NestedTest | string>;
+  private _objectProp?: NestedTest;
+  private _additionalProperties?: Map<String, NestedTest>;
+  private _sTestPatternProperties?: Map<String, string>;
+  private _sAnotherTestPatternProperties?: Map<String, NestedTest>;
 
   constructor(input: {
     stringProp: string,
     enumProp?: EnumTest,
     numberProp?: number,
-    nestedObject?: NestedTest,
-    unionTest?: NestedTest | string,
-    unionArrayTest?: (NestedTest | string)[],
-    arrayTest?: NestedTest[],
-    primitiveArrayTest?: string[],
-    tupleTest?: [NestedTest, string],
-    additionalProperties?: Map<string, NestedTest | string>,
+    objectProp?: NestedTest,
   }) {
     this._stringProp = input.stringProp;
     this._enumProp = input.enumProp;
     this._numberProp = input.numberProp;
-    this._nestedObject = input.nestedObject;
-    this._unionTest = input.unionTest;
-    this._unionArrayTest = input.unionArrayTest;
-    this._arrayTest = input.arrayTest;
-    this._primitiveArrayTest = input.primitiveArrayTest;
-    this._tupleTest = input.tupleTest;
-    this._additionalProperties = input.additionalProperties;
+    this._objectProp = input.objectProp;
   }
 
   get stringProp(): string { return this._stringProp; }
@@ -47,103 +31,53 @@ exports[`Marshalling preset should render un/marshal code 1`] = `
   get numberProp(): number | undefined { return this._numberProp; }
   set numberProp(numberProp: number | undefined) { this._numberProp = numberProp; }
 
-  get nestedObject(): NestedTest | undefined { return this._nestedObject; }
-  set nestedObject(nestedObject: NestedTest | undefined) { this._nestedObject = nestedObject; }
+  get objectProp(): NestedTest | undefined { return this._objectProp; }
+  set objectProp(objectProp: NestedTest | undefined) { this._objectProp = objectProp; }
 
-  get unionTest(): NestedTest | string | undefined { return this._unionTest; }
-  set unionTest(unionTest: NestedTest | string | undefined) { this._unionTest = unionTest; }
+  get additionalProperties(): Map<String, NestedTest> | undefined { return this._additionalProperties; }
+  set additionalProperties(additionalProperties: Map<String, NestedTest> | undefined) { this._additionalProperties = additionalProperties; }
 
-  get unionArrayTest(): (NestedTest | string)[] | undefined { return this._unionArrayTest; }
-  set unionArrayTest(unionArrayTest: (NestedTest | string)[] | undefined) { this._unionArrayTest = unionArrayTest; }
+  get sTestPatternProperties(): Map<String, string> | undefined { return this._sTestPatternProperties; }
+  set sTestPatternProperties(sTestPatternProperties: Map<String, string> | undefined) { this._sTestPatternProperties = sTestPatternProperties; }
 
-  get arrayTest(): NestedTest[] | undefined { return this._arrayTest; }
-  set arrayTest(arrayTest: NestedTest[] | undefined) { this._arrayTest = arrayTest; }
-
-  get primitiveArrayTest(): string[] | undefined { return this._primitiveArrayTest; }
-  set primitiveArrayTest(primitiveArrayTest: string[] | undefined) { this._primitiveArrayTest = primitiveArrayTest; }
-
-  get tupleTest(): [NestedTest, string] | undefined { return this._tupleTest; }
-  set tupleTest(tupleTest: [NestedTest, string] | undefined) { this._tupleTest = tupleTest; }
-
-  get constTest(): 'TEST' | undefined { return this._constTest; }
-
-  get additionalProperties(): Map<string, NestedTest | string> | undefined { return this._additionalProperties; }
-  set additionalProperties(additionalProperties: Map<string, NestedTest | string> | undefined) { this._additionalProperties = additionalProperties; }
+  get sAnotherTestPatternProperties(): Map<String, NestedTest> | undefined { return this._sAnotherTestPatternProperties; }
+  set sAnotherTestPatternProperties(sAnotherTestPatternProperties: Map<String, NestedTest> | undefined) { this._sAnotherTestPatternProperties = sAnotherTestPatternProperties; }
 
   public marshal() : string {
     let json = '{'
     if(this.stringProp !== undefined) {
-      json += \`\\"string prop\\": \${typeof this.stringProp === 'number' || typeof this.stringProp === 'boolean' ? this.stringProp : JSON.stringify(this.stringProp)},\`;
+      json += \`\\"string prop\\": \${typeof this.stringProp === 'number' || typeof this.stringProp === 'boolean' ? this.stringProp : JSON.stringify(this.stringProp)},\`; 
     }
     if(this.enumProp !== undefined) {
-      json += \`\\"enumProp\\": \${typeof this.enumProp === 'number' || typeof this.enumProp === 'boolean' ? this.enumProp : JSON.stringify(this.enumProp)},\`;
+      json += \`\\"enumProp\\": \${typeof this.enumProp === 'number' || typeof this.enumProp === 'boolean' ? this.enumProp : JSON.stringify(this.enumProp)},\`; 
     }
     if(this.numberProp !== undefined) {
-      json += \`\\"numberProp\\": \${typeof this.numberProp === 'number' || typeof this.numberProp === 'boolean' ? this.numberProp : JSON.stringify(this.numberProp)},\`;
+      json += \`\\"numberProp\\": \${typeof this.numberProp === 'number' || typeof this.numberProp === 'boolean' ? this.numberProp : JSON.stringify(this.numberProp)},\`; 
     }
-    if(this.nestedObject !== undefined) {
-      json += \`\\"nestedObject\\": \${this.nestedObject.marshal()},\`;
+    if(this.objectProp !== undefined) {
+      json += \`\\"objectProp\\": \${this.objectProp.marshal()},\`; 
     }
-    if(this.unionTest !== undefined) {
-      if(this.unionTest instanceof NestedTest) {
-          json += \`\\"unionTest\\": \${this.unionTest.marshal()},\`;
-        } else {
-          json += \`\\"unionTest\\": \${typeof this.unionTest === 'number' || typeof this.unionTest === 'boolean' ? this.unionTest : JSON.stringify(this.unionTest)},\`;
-        }
-    }
-    if(this.unionArrayTest !== undefined) {
-      const unionArrayTestJsonValues: any[] = [];
-      for (const unionItem of this.unionArrayTest) {
-        if(unionItem instanceof NestedTest) {
-          unionArrayTestJsonValues.push(unionItem.marshal());
-        } else {
-          unionArrayTestJsonValues.push(typeof unionItem === 'number' || typeof unionItem === 'boolean' ? unionItem : JSON.stringify(unionItem))
-        }
+    if(this.sTestPatternProperties !== undefined) { 
+      for (const [key, value] of this.sTestPatternProperties.entries()) {
+        //Only render pattern properties which are not already a property
+        if(Object.keys(this).includes(String(key))) continue;
+        json += \`\\"\${key}\\": \${typeof value === 'number' || typeof value === 'boolean' ? value : JSON.stringify(value)},\`;
       }
-      json += \`\\"unionArrayTest\\": [\${unionArrayTestJsonValues.join(',')}],\`;
-    }
-    if(this.arrayTest !== undefined) {
-      let arrayTestJsonValues: any[] = [];
-      for (const unionItem of this.arrayTest) {
-        arrayTestJsonValues.push(\`\${unionItem.marshal()}\`);
+    }if(this.sAnotherTestPatternProperties !== undefined) { 
+      for (const [key, value] of this.sAnotherTestPatternProperties.entries()) {
+        //Only render pattern properties which are not already a property
+        if(Object.keys(this).includes(String(key))) continue;
+        json += \`\\"\${key}\\": \${value.marshal()},\`;
       }
-      json += \`\\"arrayTest\\": [\${arrayTestJsonValues.join(',')}],\`;
-    }
-    if(this.primitiveArrayTest !== undefined) {
-      let primitiveArrayTestJsonValues: any[] = [];
-      for (const unionItem of this.primitiveArrayTest) {
-        primitiveArrayTestJsonValues.push(\`\${typeof unionItem === 'number' || typeof unionItem === 'boolean' ? unionItem : JSON.stringify(unionItem)}\`);
-      }
-      json += \`\\"primitiveArrayTest\\": [\${primitiveArrayTestJsonValues.join(',')}],\`;
-    }
-    if(this.tupleTest !== undefined) {
-      const serializedTuple: any[] = [];
-    if(this.tupleTest[0]) {
-      serializedTuple[0] = \`\${this.tupleTest[0].marshal()}\`
-    } else {
-      serializedTuple[0] = null;
-    }
-    if(this.tupleTest[1]) {
-      serializedTuple[1] = \`\${typeof this.tupleTest[1] === 'number' || typeof this.tupleTest[1] === 'boolean' ? this.tupleTest[1] : JSON.stringify(this.tupleTest[1])}\`
-    } else {
-      serializedTuple[1] = null;
-    }
-    json += \`\\"tupleTest\\": [\${serializedTuple.join(',')}],\`;
-    }
-    if(this.constTest !== undefined) {
-      json += \`\\"constTest\\": \${typeof this.constTest === 'number' || typeof this.constTest === 'boolean' ? this.constTest : JSON.stringify(this.constTest)},\`;
     }
     if(this.additionalProperties !== undefined) { 
       for (const [key, value] of this.additionalProperties.entries()) {
-        //Only unwrap those that are not already a property in the JSON object
-        if([\\"string prop\\",\\"enumProp\\",\\"numberProp\\",\\"nestedObject\\",\\"unionTest\\",\\"unionArrayTest\\",\\"arrayTest\\",\\"primitiveArrayTest\\",\\"tupleTest\\",\\"constTest\\",\\"additionalProperties\\"].includes(String(key))) continue;
-        if(value instanceof NestedTest) {
-          json += \`\\"\${key}\\": \${value.marshal()},\`;
-        } else {
-          json += \`\\"\${key}\\": \${typeof value === 'number' || typeof value === 'boolean' ? value : JSON.stringify(value)},\`;
-        }
+        //Only render additionalProperties which are not already a property
+        if(Object.keys(this).includes(String(key))) continue;
+        json += \`\\"\${key}\\": \${value.marshal()},\`;
       }
     }
+
     //Remove potential last comma 
     return \`\${json.charAt(json.length-1) === ',' ? json.slice(0, json.length-1) : json}}\`;
   }
@@ -161,32 +95,26 @@ exports[`Marshalling preset should render un/marshal code 1`] = `
     if (obj[\\"numberProp\\"] !== undefined) {
       instance.numberProp = obj[\\"numberProp\\"];
     }
-    if (obj[\\"nestedObject\\"] !== undefined) {
-      instance.nestedObject = NestedTest.unmarshal(obj[\\"nestedObject\\"]);
-    }
-    if (obj[\\"unionTest\\"] !== undefined) {
-      instance.unionTest = obj[\\"unionTest\\"];
-    }
-    if (obj[\\"unionArrayTest\\"] !== undefined) {
-      instance.unionArrayTest = obj[\\"unionArrayTest\\"];
-    }
-    if (obj[\\"arrayTest\\"] !== undefined) {
-      instance.arrayTest = obj[\\"arrayTest\\"] == null
-        ? null
-        : obj[\\"arrayTest\\"].map((item: any) => NestedTest.unmarshal(item));
-    }
-    if (obj[\\"primitiveArrayTest\\"] !== undefined) {
-      instance.primitiveArrayTest = obj[\\"primitiveArrayTest\\"];
-    }
-    if (obj[\\"tupleTest\\"] !== undefined) {
-      instance.tupleTest = obj[\\"tupleTest\\"];
+    if (obj[\\"objectProp\\"] !== undefined) {
+      instance.objectProp = NestedTest.unmarshal(obj[\\"objectProp\\"]);
     }
 
-  
-    instance.additionalProperties = new Map();
-    const propsToCheck = Object.entries(obj).filter((([key,]) => {return ![\\"string prop\\",\\"enumProp\\",\\"numberProp\\",\\"nestedObject\\",\\"unionTest\\",\\"unionArrayTest\\",\\"arrayTest\\",\\"primitiveArrayTest\\",\\"tupleTest\\",\\"constTest\\",\\"additionalProperties\\"].includes(key);}));
-    for (const [key, value] of propsToCheck) {
-      instance.additionalProperties.set(key, value as any);
+    //Not part of core properties
+    if (instance.sTestPatternProperties === undefined) {instance.sTestPatternProperties = new Map();}
+  if (instance.sAnotherTestPatternProperties === undefined) {instance.sAnotherTestPatternProperties = new Map();}
+
+    if (instance.additionalProperties === undefined) {instance.additionalProperties = new Map();}
+    for (const [key, value] of Object.entries(obj).filter((([key,]) => {return ![\\"string prop\\",\\"enumProp\\",\\"numberProp\\",\\"objectProp\\"].includes(key);}))) {
+      //Check all pattern properties
+      if (key.match(new RegExp('^S(.?)test'))) {
+        instance.sTestPatternProperties.set(key, value as any);
+        continue;
+      }//Check all pattern properties
+      if (key.match(new RegExp('^S(.?)AnotherTest'))) {
+        instance.sAnotherTestPatternProperties.set(key, NestedTest.unmarshal(value as any));
+        continue;
+      }
+      instance.additionalProperties.set(key, NestedTest.unmarshal(value as any));
     }
     return instance;
   }
@@ -194,45 +122,36 @@ exports[`Marshalling preset should render un/marshal code 1`] = `
 `;
 
 exports[`Marshalling preset should render un/marshal code 2`] = `
-"enum EnumTest {
-  SOME_SPACE_ENUM_SPACE_STRING = \\"Some enum String\\",
-  RESERVED_TRUE = \\"true\\",
-  CURLYLEFT_QUOTATION_TEST_QUOTATION_COLON_QUOTATION_TEST_QUOTATION_CURLYRIGHT = '{\\"test\\":\\"test\\"}',
-  NUMBER_2 = 2,
-}"
-`;
-
-exports[`Marshalling preset should render un/marshal code 3`] = `
-"class NestedTest {
+"export class NestedTest {
   private _stringProp?: string;
-  private _additionalProperties?: Map<string, any>;
+  private _additionalProperties?: Map<String, object | string | number | Array<unknown> | boolean | null>;
 
   constructor(input: {
     stringProp?: string,
-    additionalProperties?: Map<string, any>,
   }) {
     this._stringProp = input.stringProp;
-    this._additionalProperties = input.additionalProperties;
   }
 
   get stringProp(): string | undefined { return this._stringProp; }
   set stringProp(stringProp: string | undefined) { this._stringProp = stringProp; }
 
-  get additionalProperties(): Map<string, any> | undefined { return this._additionalProperties; }
-  set additionalProperties(additionalProperties: Map<string, any> | undefined) { this._additionalProperties = additionalProperties; }
+  get additionalProperties(): Map<String, object | string | number | Array<unknown> | boolean | null> | undefined { return this._additionalProperties; }
+  set additionalProperties(additionalProperties: Map<String, object | string | number | Array<unknown> | boolean | null> | undefined) { this._additionalProperties = additionalProperties; }
 
   public marshal() : string {
     let json = '{'
     if(this.stringProp !== undefined) {
-      json += \`\\"stringProp\\": \${typeof this.stringProp === 'number' || typeof this.stringProp === 'boolean' ? this.stringProp : JSON.stringify(this.stringProp)},\`;
+      json += \`\\"stringProp\\": \${typeof this.stringProp === 'number' || typeof this.stringProp === 'boolean' ? this.stringProp : JSON.stringify(this.stringProp)},\`; 
     }
+  
     if(this.additionalProperties !== undefined) { 
       for (const [key, value] of this.additionalProperties.entries()) {
-        //Only unwrap those that are not already a property in the JSON object
-        if([\\"stringProp\\",\\"additionalProperties\\"].includes(String(key))) continue;
+        //Only render additionalProperties which are not already a property
+        if(Object.keys(this).includes(String(key))) continue;
         json += \`\\"\${key}\\": \${typeof value === 'number' || typeof value === 'boolean' ? value : JSON.stringify(value)},\`;
       }
     }
+
     //Remove potential last comma 
     return \`\${json.charAt(json.length-1) === ',' ? json.slice(0, json.length-1) : json}}\`;
   }
@@ -244,10 +163,12 @@ exports[`Marshalling preset should render un/marshal code 3`] = `
     if (obj[\\"stringProp\\"] !== undefined) {
       instance.stringProp = obj[\\"stringProp\\"];
     }
+
+    //Not part of core properties
   
-    instance.additionalProperties = new Map();
-    const propsToCheck = Object.entries(obj).filter((([key,]) => {return ![\\"stringProp\\",\\"additionalProperties\\"].includes(key);}));
-    for (const [key, value] of propsToCheck) {
+    if (instance.additionalProperties === undefined) {instance.additionalProperties = new Map();}
+    for (const [key, value] of Object.entries(obj).filter((([key,]) => {return ![\\"stringProp\\"].includes(key);}))) {
+    
       instance.additionalProperties.set(key, value as any);
     }
     return instance;

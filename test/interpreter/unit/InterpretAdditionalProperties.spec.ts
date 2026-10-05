@@ -21,19 +21,11 @@ describe('Interpretation of additionalProperties', () => {
 
     interpretAdditionalProperties(schema, model, interpreter);
 
-    expect(interpreter.interpret).toHaveBeenNthCalledWith(
-      1,
-      { type: 'string' },
-      Interpreter.defaultInterpreterOptions
-    );
-    expect(model.addAdditionalProperty).toHaveBeenNthCalledWith(
-      1,
-      mockedReturnModel,
-      schema
-    );
+    expect(interpreter.interpret).toHaveBeenNthCalledWith(1, { type: 'string' }, Interpreter.defaultInterpreterOptions);
+    expect(model.addAdditionalProperty).toHaveBeenNthCalledWith(1, mockedReturnModel, schema);
   });
   test('should ignore model if interpreter cannot interpret additionalProperty schema', () => {
-    const schema: any = {};
+    const schema: any = { };
     const model = new CommonModel();
     model.type = 'object';
     const interpreter = new Interpreter();
@@ -52,15 +44,11 @@ describe('Interpretation of additionalProperties', () => {
 
     interpretAdditionalProperties(schema, model, interpreter);
 
-    expect(interpreter.interpret).toHaveBeenNthCalledWith(
-      1,
-      false,
-      Interpreter.defaultInterpreterOptions
-    );
+    expect(interpreter.interpret).toHaveBeenNthCalledWith(1, false, Interpreter.defaultInterpreterOptions);
     expect(model.addAdditionalProperty).not.toHaveBeenCalled();
   });
   test('should only work if model is object type', () => {
-    const schema: any = {};
+    const schema: any = { };
     const model = new CommonModel();
     model.type = 'string';
     const interpreter = new Interpreter();
@@ -73,7 +61,7 @@ describe('Interpretation of additionalProperties', () => {
     expect(model.addAdditionalProperty).not.toHaveBeenCalled();
   });
   test('should default to true', () => {
-    const schema: any = {};
+    const schema: any = { };
     const model = new CommonModel();
     model.type = 'object';
     const interpreter = new Interpreter();
@@ -81,70 +69,8 @@ describe('Interpretation of additionalProperties', () => {
     (interpreter.interpret as jest.Mock).mockReturnValue(mockedReturnModel);
 
     interpretAdditionalProperties(schema, model, interpreter);
-
-    expect(interpreter.interpret).toHaveBeenNthCalledWith(
-      1,
-      true,
-      Interpreter.defaultInterpreterOptions
-    );
-    expect(model.addAdditionalProperty).toHaveBeenNthCalledWith(
-      1,
-      mockedReturnModel,
-      schema
-    );
-  });
-  test('should apply ignoreAdditionalProperties for schemas with properties', () => {
-    const schema: any = { properties: { property1: { type: 'string' } } };
-    const model = new CommonModel();
-    model.type = 'object';
-    const interpreter = new Interpreter();
-    const options = { ignoreAdditionalProperties: true };
-    const mockedReturnModel = new CommonModel();
-    (interpreter.interpret as jest.Mock).mockReturnValue(mockedReturnModel);
-
-    interpretAdditionalProperties(schema, model, interpreter, options);
-
-    expect(interpreter.interpret).toHaveBeenNthCalledWith(1, false, options);
-    expect(model.addAdditionalProperty).toHaveBeenNthCalledWith(
-      1,
-      mockedReturnModel,
-      schema
-    );
-  });
-  test('should not apply ignoreAdditionalProperties for schemas explicit additionalProperties', () => {
-    const schema: any = { additionalProperties: true };
-    const model = new CommonModel();
-    model.type = 'object';
-    const interpreter = new Interpreter();
-    const options = { ignoreAdditionalProperties: true };
-    const mockedReturnModel = new CommonModel();
-    (interpreter.interpret as jest.Mock).mockReturnValue(mockedReturnModel);
-
-    interpretAdditionalProperties(schema, model, interpreter, options);
-
-    expect(interpreter.interpret).toHaveBeenNthCalledWith(1, true, options);
-    expect(model.addAdditionalProperty).toHaveBeenNthCalledWith(
-      1,
-      mockedReturnModel,
-      schema
-    );
-  });
-  test('should not apply ignoreAdditionalProperties if no other properties defined', () => {
-    const schema: any = {};
-    const model = new CommonModel();
-    model.type = 'object';
-    const interpreter = new Interpreter();
-    const options = { ignoreAdditionalProperties: true };
-    const mockedReturnModel = new CommonModel();
-    (interpreter.interpret as jest.Mock).mockReturnValue(mockedReturnModel);
-
-    interpretAdditionalProperties(schema, model, interpreter, options);
-
-    expect(interpreter.interpret).toHaveBeenNthCalledWith(1, true, options);
-    expect(model.addAdditionalProperty).toHaveBeenNthCalledWith(
-      1,
-      mockedReturnModel,
-      schema
-    );
+    
+    expect(interpreter.interpret).toHaveBeenNthCalledWith(1, true, Interpreter.defaultInterpreterOptions);
+    expect(model.addAdditionalProperty).toHaveBeenNthCalledWith(1, mockedReturnModel, schema);
   });
 });

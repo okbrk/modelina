@@ -2,12 +2,11 @@
 import { CommonModel } from '../../../src/models/CommonModel';
 import { Interpreter } from '../../../src/interpreter/Interpreter';
 import interpretProperties from '../../../src/interpreter/InterpretProperties';
-import { AsyncapiV2Schema } from '../../../src';
 jest.mock('../../../src/interpreter/Interpreter');
 jest.mock('../../../src/models/CommonModel');
 CommonModel.mergeCommonModels = jest.fn();
 /**
- * Some of these test are purely theoretical and have little if any merit
+ * Some of these test are purely theoretical and have little if any merit 
  * on a JSON Schema which actually makes sense but are used to test the principles.
  */
 describe('Interpretation of properties', () => {
@@ -26,7 +25,7 @@ describe('Interpretation of properties', () => {
     (interpreter.interpret as jest.Mock).mockReturnValue(mockedReturnModel);
 
     interpretProperties(schema, model, interpreter);
-
+    
     expect(JSON.stringify(model)).toEqual(JSON.stringify(new CommonModel()));
   });
   test('should ignore model if interpreter cannot interpret property schema', () => {
@@ -56,42 +55,10 @@ describe('Interpretation of properties', () => {
     const interpreter = new Interpreter();
     const mockedReturnModel = new CommonModel();
     (interpreter.interpret as jest.Mock).mockReturnValue(mockedReturnModel);
-
+    
     interpretProperties(schema, model, interpreter);
 
-    expect(interpreter.interpret).toHaveBeenNthCalledWith(
-      1,
-      { type: 'string' },
-      Interpreter.defaultInterpreterOptions
-    );
-    expect(model.addProperty).toHaveBeenNthCalledWith(
-      1,
-      'property1',
-      mockedReturnModel,
-      schema
-    );
-  });
-
-  test('should set discriminator when discriminator is set in interpreterOptions', () => {
-    const property = AsyncapiV2Schema.toSchema({
-      type: 'string'
-    });
-    const schema = AsyncapiV2Schema.toSchema({
-      type: 'object',
-      properties: {
-        discriminatorProperty: property
-      }
-    });
-    const model = new CommonModel();
-    const interpreter = new Interpreter();
-
-    interpretProperties(schema, model, interpreter, {
-      discriminator: 'discriminatorProperty'
-    });
-
-    expect(model.discriminator).toBe('discriminatorProperty');
-    expect(interpreter.interpret).toHaveBeenCalledWith(property, {
-      discriminator: 'discriminatorProperty'
-    });
+    expect(interpreter.interpret).toHaveBeenNthCalledWith(1, { type: 'string' }, Interpreter.defaultInterpreterOptions);
+    expect(model.addProperty).toHaveBeenNthCalledWith(1, 'property1', mockedReturnModel, schema);
   });
 });

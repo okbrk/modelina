@@ -1,452 +1,180 @@
-/* eslint-disable no-undef */
-/* eslint-disable @typescript-eslint/no-var-requires */
-import {
-  isAsyncAPIDocument,
-  isOldAsyncAPIDocument,
-  AsyncAPIDocumentInterface,
-  SchemaInterface as AsyncAPISchemaInterface,
-  SchemaV2 as AsyncAPISchema,
-  fromFile,
-  createAsyncAPIDocument,
-  MessagesInterface
-} from '@asyncapi/parser';
-import yaml from 'js-yaml';
+import {parse, AsyncAPIDocument, Schema as AsyncAPISchema, ParserOptions} from '@asyncapi/parser';
 import { AbstractInputProcessor } from './AbstractInputProcessor';
 import { JsonSchemaInputProcessor } from './JsonSchemaInputProcessor';
-import { InputMetaModel, ProcessorOptions } from '../models';
+import { CommonInputModel, ProcessorOptions } from '../models';
 import { Logger } from '../utils';
 import { AsyncapiV2Schema } from '../models/AsyncapiV2Schema';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
-import {
-  ConvertDocumentParserAPIVersion,
-  NewParser
-} from '@asyncapi/multi-parser';
-import { createDetailedAsyncAPI } from '@asyncapi/parser/cjs/utils';
 
 /**
  * Class for processing AsyncAPI inputs
  */
 export class AsyncAPIInputProcessor extends AbstractInputProcessor {
-  static supportedVersions = [
-    '2.0.0',
-    '2.1.0',
-    '2.2.0',
-    '2.3.0',
-    '2.4.0',
-    '2.5.0',
-    '2.6.0',
-    '3.0.0'
-  ];
+  static supportedVersions = ['2.0.0', '2.1.0', '2.2.0'];
 
   /**
    * Process the input as an AsyncAPI document
-   *
-   * @param input
+   * 
+   * @param input 
    */
-  // eslint-disable-next-line sonarjs/cognitive-complexity
-  async process(
-    input?: any,
-    options?: ProcessorOptions
-  ): Promise<InputMetaModel> {
-    const rawInput = input;
-    let doc: AsyncAPIDocumentInterface | undefined;
-
-    if (!this.shouldProcess(rawInput)) {
-      throw new Error(
-        'Input is not an AsyncAPI document so it cannot be processed.'
-      );
-    }
+  async process(input: Record<string, any>, options?: ProcessorOptions): Promise<CommonInputModel> {
+    if (!this.shouldProcess(input)) {throw new Error('Input is not an AsyncAPI document so it cannot be processed.');}
 
     Logger.debug('Processing input as an AsyncAPI document');
-    const inputModel = new InputMetaModel();
-    if (isOldAsyncAPIDocument(rawInput)) {
-      // Is from old parser
-      const parsedJSON = rawInput.json();
-      const detailed = createDetailedAsyncAPI(parsedJSON, parsedJSON);
-      doc = createAsyncAPIDocument(detailed);
-    } else if (AsyncAPIInputProcessor.isFromNewParser(rawInput)) {
-      doc = ConvertDocumentParserAPIVersion(rawInput, 2) as any;
+    let doc: AsyncAPIDocument;
+    const common = new CommonInputModel();
+    if (!AsyncAPIInputProcessor.isFromParser(input)) {
+      doc = await parse(input as any, options?.asyncapi || {} as ParserOptions);
     } else {
-      const parserOptions = options?.asyncapi || {};
-      const parser = NewParser(3, {
-        parserOptions,
-        includeSchemaParsers: true
-      });
-
-      let parserResult;
-      if (this.isFileInput(input)) {
-        const filePath = fileURLToPath(input);
-        /* eslint-disable-next-line security/detect-non-literal-fs-filename -- Safe as it just checks file existance */
-        if (!fs.existsSync(filePath)) {
-          throw new Error('File does not exists.');
-        }
-        parserResult = await fromFile(parser as any, filePath).parse();
-      } else {
-        parserResult = await parser.parse(rawInput, parserOptions);
-      }
-      const { document, diagnostics } = parserResult;
-      if (document) {
-        doc = document as unknown as AsyncAPIDocumentInterface;
-      } else {
-        const err = new Error(
-          'Input is not an correct AsyncAPI document so it cannot be processed.'
-        );
-        (err as any).diagnostics = diagnostics;
-        throw err;
-      }
+      doc = input as AsyncAPIDocument;
     }
-    if (!doc) {
-      throw new Error('Could not parse input as AsyncAPI document');
+    common.originalInput = doc;
+    
+    for (const [, message] of doc.allMessages()) {
+      const schema = AsyncAPIInputProcessor.convertToInternalSchema(message.payload());
+      const commonModels = JsonSchemaInputProcessor.convertSchemaToCommonModel(schema);
+      common.models = {...common.models, ...commonModels};
     }
-
-    inputModel.originalInput = doc;
-
-    const addToInputModel = (payload: AsyncAPISchemaInterface) => {
-      const schema = AsyncAPIInputProcessor.convertToInternalSchema(payload);
-      const newMetaModel = JsonSchemaInputProcessor.convertSchemaToMetaModel(
-        schema,
-        options
-      );
-      if (inputModel.models[newMetaModel.name] !== undefined) {
-        Logger.warn(
-          `Overwriting existing model with name ${newMetaModel.name}, are there two models with the same name present? Overwriting the old model.`,
-          newMetaModel.name
-        );
-      }
-      inputModel.models[newMetaModel.name] = newMetaModel;
-    };
-
-    // Go over all the message payloads and convert them to models
-    const channels = doc.channels();
-
-    if (channels.length) {
-      for (const channel of doc.channels()) {
-        for (const operation of channel.operations()) {
-          const handleMessages = (messages: MessagesInterface) => {
-            // treat multiple messages as oneOf
-            if (messages.length > 1) {
-              const oneOf: any[] = [];
-
-              for (const message of messages) {
-                const payload = message.payload();
-
-                if (!payload) {
-                  continue;
-                }
-
-                // Add each individual message payload as a separate model
-                addToInputModel(payload);
-                oneOf.push(payload.json());
-              }
-
-              const payload = new AsyncAPISchema(
-                {
-                  $id: channel.id(),
-                  oneOf
-                },
-                channel.meta()
-              );
-
-              addToInputModel(payload);
-            } else if (messages.length === 1) {
-              const payload = messages[0].payload();
-              if (payload) {
-                addToInputModel(payload);
-              }
-            }
-          };
-          const replyOperation = operation.reply();
-          if (replyOperation !== undefined) {
-            const replyMessages = replyOperation.messages();
-            if (replyMessages.length > 0) {
-              handleMessages(replyMessages);
-            } else {
-              const replyChannelMessages = replyOperation.channel()?.messages();
-              if (replyChannelMessages) {
-                handleMessages(replyChannelMessages);
-              }
-            }
-          }
-          handleMessages(operation.messages());
-        }
-      }
-    } else {
-      for (const message of doc.allMessages()) {
-        const payload = message.payload();
-        if (payload) {
-          addToInputModel(payload);
-        }
-      }
-    }
-
-    return inputModel;
+    return common;
   }
 
   /**
-   *
-   * Reflect the name of the schema and save it to `x-modelgen-inferred-name` extension.
-   *
+   * 
+   * Reflect the name of the schema and save it to `x-modelgen-inferred-name` extension. 
+   * 
    * This keeps the the id of the model deterministic if used in conjunction with other AsyncAPI tools such as the generator.
-   *
+   * 
    * @param schema to reflect name for
    */
-  /* eslint-disable @typescript-eslint/no-non-null-assertion */
   // eslint-disable-next-line sonarjs/cognitive-complexity
   static convertToInternalSchema(
-    schema: AsyncAPISchemaInterface | boolean,
+    schema: AsyncAPISchema | boolean,
     alreadyIteratedSchemas: Map<string, AsyncapiV2Schema> = new Map()
   ): AsyncapiV2Schema | boolean {
-    if (typeof schema === 'boolean') {
-      return schema;
-    }
-
-    let schemaUid = schema.id();
-    //Because the constraint functionality of generators cannot handle -, <, >, we remove them from the id if it's an anonymous schema.
-    if (
-      typeof schemaUid !== 'undefined' &&
-      schemaUid.includes('<anonymous-schema')
-    ) {
-      schemaUid = schemaUid
-        .replace('<', '')
-        .replace(/-/g, '_')
-        .replace('>', '');
-    }
-
+    if (typeof schema === 'boolean') {return schema;}
+    const schemaUid = schema.uid();
     if (alreadyIteratedSchemas.has(schemaUid)) {
-      return alreadyIteratedSchemas.get(schemaUid) as AsyncapiV2Schema;
+      return alreadyIteratedSchemas.get(schemaUid) as AsyncapiV2Schema; 
     }
-
-    const convertedSchema = AsyncapiV2Schema.toSchema(schema.json());
-    convertedSchema[this.MODELGEN_INFFERED_NAME] = schemaUid;
+    let convertedSchema = new AsyncapiV2Schema();
     alreadyIteratedSchemas.set(schemaUid, convertedSchema);
+    convertedSchema = Object.assign({}, schema.json());
+    convertedSchema[this.MODELGEN_INFFERED_NAME] = schemaUid;
 
-    if (schema.allOf()) {
-      convertedSchema.allOf = schema
-        .allOf()!
-        .map((item: any) =>
-          this.convertToInternalSchema(item, alreadyIteratedSchemas)
-        );
+    if (schema.allOf() !== null) {
+      convertedSchema.allOf = schema.allOf().map((item) => this.convertToInternalSchema(item, alreadyIteratedSchemas));
     }
-    if (schema.oneOf()) {
-      convertedSchema.oneOf = schema
-        .oneOf()!
-        .map((item: any) =>
-          this.convertToInternalSchema(item, alreadyIteratedSchemas)
-        );
+    if (schema.oneOf() !== null) {
+      convertedSchema.oneOf = schema.oneOf().map((item) => this.convertToInternalSchema(item, alreadyIteratedSchemas));
     }
-    if (schema.anyOf()) {
-      convertedSchema.anyOf = schema
-        .anyOf()!
-        .map((item: any) =>
-          this.convertToInternalSchema(item, alreadyIteratedSchemas)
-        );
+    if (schema.anyOf() !== null) {
+      convertedSchema.anyOf = schema.anyOf().map((item) => this.convertToInternalSchema(item, alreadyIteratedSchemas));
     }
-    if (schema.not()) {
-      convertedSchema.not = this.convertToInternalSchema(
-        schema.not()!,
-        alreadyIteratedSchemas
-      );
+    if (schema.not() !== null) {
+      convertedSchema.not = this.convertToInternalSchema(schema.not(), alreadyIteratedSchemas);
     }
     if (
       typeof schema.additionalItems() === 'object' &&
       schema.additionalItems() !== null
     ) {
-      convertedSchema.additionalItems = this.convertToInternalSchema(
-        schema.additionalItems(),
-        alreadyIteratedSchemas
-      );
+      convertedSchema.additionalItems = this.convertToInternalSchema(schema.additionalItems(), alreadyIteratedSchemas);
     }
-    if (schema.contains()) {
-      convertedSchema.contains = this.convertToInternalSchema(
-        schema.contains()!,
-        alreadyIteratedSchemas
-      );
+    if (schema.contains() !== null) {
+      convertedSchema.contains = this.convertToInternalSchema(schema.contains(), alreadyIteratedSchemas);
     }
-    if (schema.propertyNames()) {
-      convertedSchema.propertyNames = this.convertToInternalSchema(
-        schema.propertyNames()!,
-        alreadyIteratedSchemas
-      );
+    if (schema.propertyNames() !== null) {
+      convertedSchema.propertyNames = this.convertToInternalSchema(schema.propertyNames(), alreadyIteratedSchemas);
     }
-    if (schema.if()) {
-      convertedSchema.if = this.convertToInternalSchema(
-        schema.if()!,
-        alreadyIteratedSchemas
-      );
+    if (schema.if() !== null) {
+      convertedSchema.if = this.convertToInternalSchema(schema.if(), alreadyIteratedSchemas);
     }
-    if (schema.then()) {
-      convertedSchema.then = this.convertToInternalSchema(
-        schema.then()!,
-        alreadyIteratedSchemas
-      );
+    if (schema.then() !== null) {
+      convertedSchema.then = this.convertToInternalSchema(schema.then(), alreadyIteratedSchemas);
     }
-    if (schema.else()) {
-      convertedSchema.else = this.convertToInternalSchema(
-        schema.else()!,
-        alreadyIteratedSchemas
-      );
+    if (schema.else() !== null) {
+      convertedSchema.else = this.convertToInternalSchema(schema.else(), alreadyIteratedSchemas);
     }
     if (
-      typeof schema.additionalProperties() === 'object' &&
+      typeof schema.additionalProperties() === 'object' && 
       schema.additionalProperties() !== null
     ) {
-      convertedSchema.additionalProperties = this.convertToInternalSchema(
-        schema.additionalProperties(),
-        alreadyIteratedSchemas
-      );
+      convertedSchema.additionalProperties = this.convertToInternalSchema(schema.additionalProperties(), alreadyIteratedSchemas);
     }
-    if (schema.items()) {
+    if (schema.items() !== null) {
       if (Array.isArray(schema.items())) {
-        convertedSchema.items = (
-          schema.items() as AsyncAPISchemaInterface[]
-        ).map(
-          (item) => this.convertToInternalSchema(item),
-          alreadyIteratedSchemas
-        );
+        convertedSchema.items = (schema.items() as AsyncAPISchema[]).map((item) => this.convertToInternalSchema(item), alreadyIteratedSchemas);
       } else {
-        convertedSchema.items = this.convertToInternalSchema(
-          schema.items() as AsyncAPISchemaInterface,
-          alreadyIteratedSchemas
-        );
+        convertedSchema.items = this.convertToInternalSchema(schema.items() as AsyncAPISchema, alreadyIteratedSchemas);
       }
     }
 
-    const schemaProperties = schema.properties();
-    if (schemaProperties && Object.keys(schemaProperties).length) {
-      const properties: { [key: string]: AsyncapiV2Schema | boolean } = {};
-      for (const [propertyName, propertySchema] of Object.entries(
-        schemaProperties
-      )) {
-        properties[String(propertyName)] = this.convertToInternalSchema(
-          propertySchema,
-          alreadyIteratedSchemas
-        );
+    if (schema.properties() !== null && Object.keys(schema.properties()).length) {
+      const properties : {[key: string]: AsyncapiV2Schema | boolean} = {};
+      for (const [propertyName, propertySchema] of Object.entries(schema.properties())) {
+        properties[String(propertyName)] = this.convertToInternalSchema(propertySchema, alreadyIteratedSchemas);
       }
       convertedSchema.properties = properties;
     }
-
-    const schemaDependencies = schema.dependencies();
-    if (schemaDependencies && Object.keys(schemaDependencies).length) {
-      const dependencies: {
-        [key: string]: AsyncapiV2Schema | boolean | string[];
-      } = {};
-      for (const [dependencyName, dependency] of Object.entries(
-        schemaDependencies
-      )) {
+    if (schema.dependencies() !== null && Object.keys(schema.dependencies()).length) {
+      const dependencies: { [key: string]: AsyncapiV2Schema | boolean | string[] } = {};
+      for (const [dependencyName, dependency] of Object.entries(schema.dependencies())) {
         if (typeof dependency === 'object' && !Array.isArray(dependency)) {
-          dependencies[String(dependencyName)] = this.convertToInternalSchema(
-            dependency,
-            alreadyIteratedSchemas
-          );
+          dependencies[String(dependencyName)] = this.convertToInternalSchema(dependency, alreadyIteratedSchemas);
         } else {
-          dependencies[String(dependencyName)] = dependency;
+          dependencies[String(dependencyName)] = dependency as string[];
         }
       }
       convertedSchema.dependencies = dependencies;
     }
-
-    const schemaPatternProperties = schema.patternProperties();
-    if (
-      schemaPatternProperties &&
-      Object.keys(schemaPatternProperties).length
-    ) {
-      const patternProperties: { [key: string]: AsyncapiV2Schema | boolean } =
-        {};
-      for (const [patternPropertyName, patternProperty] of Object.entries(
-        schemaPatternProperties
-      )) {
-        patternProperties[String(patternPropertyName)] =
-          this.convertToInternalSchema(patternProperty, alreadyIteratedSchemas);
+    if (schema.patternProperties() !== null && Object.keys(schema.patternProperties()).length) {
+      const patternProperties: { [key: string]: AsyncapiV2Schema | boolean } = {};
+      for (const [patternPropertyName, patternProperty] of Object.entries(schema.patternProperties())) {
+        patternProperties[String(patternPropertyName)] = this.convertToInternalSchema(patternProperty, alreadyIteratedSchemas);
       }
       convertedSchema.patternProperties = patternProperties;
     }
-
-    const schemaDefinitions = schema.definitions();
-    if (schemaDefinitions && Object.keys(schemaDefinitions).length) {
+    if (schema.definitions() !== null && Object.keys(schema.definitions()).length) {
       const definitions: { [key: string]: AsyncapiV2Schema | boolean } = {};
-      for (const [definitionName, definition] of Object.entries(
-        schemaDefinitions
-      )) {
-        definitions[String(definitionName)] = this.convertToInternalSchema(
-          definition,
-          alreadyIteratedSchemas
-        );
+      for (const [definitionName, definition] of Object.entries(schema.definitions())) {
+        definitions[String(definitionName)] = this.convertToInternalSchema(definition, alreadyIteratedSchemas);
       }
       convertedSchema.definitions = definitions;
     }
 
     return convertedSchema;
   }
-
   /**
-   * Figures out if an object is of type AsyncAPI document
-   *
-   * @param input
-   */
-  shouldProcess(input?: any): boolean {
-    if (!input) {
-      return false;
-    }
-    if (this.isFileInput(input)) {
-      return true;
-    }
+	 * Figures out if an object is of type AsyncAPI document
+	 * 
+	 * @param input 
+	 */
+  shouldProcess(input: Record<string, any>) : boolean {
     const version = this.tryGetVersionOfDocument(input);
-    if (!version) {
-      return false;
-    }
+    if (!version) {return false;}
     return AsyncAPIInputProcessor.supportedVersions.includes(version);
   }
 
   /**
    * Try to find the AsyncAPI version from the input. If it cannot undefined are returned, if it can, the version is returned.
-   *
-   * @param input
+   * 
+   * @param input 
    */
-  tryGetVersionOfDocument(input?: any): string | undefined {
-    if (!input) {
-      return;
-    }
-    if (typeof input === 'string') {
-      //If string input, it could be stringified JSON or YAML format, lets check
-      let loadedObj;
-      try {
-        loadedObj = yaml.load(input);
-      } catch (e) {
-        try {
-          loadedObj = JSON.parse(input);
-        } catch (e) {
-          return undefined;
-        }
-      }
-      return loadedObj?.asyncapi;
-    }
+  tryGetVersionOfDocument(input: Record<string, any>) : string | undefined {
     if (AsyncAPIInputProcessor.isFromParser(input)) {
       return input.version();
     }
-    return input?.asyncapi;
+    return input && input.asyncapi;
   }
 
   /**
-   * Figure out if input is from the AsyncAPI parser.
-   *
-   * @param input
+   * Figure out if input is from the AsyncAPI js parser.
+   * 
+   * @param input 
    */
-  static isFromParser(input?: any): boolean {
-    return isOldAsyncAPIDocument(input) || this.isFromNewParser(input);
-  }
-
-  /**
-   * Figure out if input is from the new AsyncAPI parser.
-   *
-   * @param input
-   */
-  static isFromNewParser(input?: any): boolean {
-    return isAsyncAPIDocument(input);
-  }
-
-  isFileInput(input: any): boolean {
-    // prettier-ignore
-    return typeof input === 'string' && (/^file:\/\//g).test(input);
+  static isFromParser(input: Record<string, any>): boolean {
+    if (input['_json'] !== undefined && input['_json'].asyncapi !== undefined && 
+      typeof input.version === 'function') {
+      return true;
+    }
+    return false;
   }
 }

@@ -19,17 +19,17 @@ export class Draft6Schema {
   oneOf?: (Draft6Schema | boolean)[];
   anyOf?: (Draft6Schema | boolean)[];
   not?: Draft6Schema | boolean;
-  dependencies?: { [key: string]: Draft6Schema | boolean | string[] };
+  dependencies?: { [key: string]: Draft6Schema | boolean | string[]; };
   format?: string;
-  definitions?: { [key: string]: Draft6Schema | boolean };
+  definitions?: { [key: string]: Draft6Schema | boolean; };
   description?: string;
   default?: any;
   type?: string | string[];
   enum?: any[];
   items?: Draft6Schema | Draft6Schema[] | boolean;
-  properties?: { [key: string]: Draft6Schema | boolean };
+  properties?: { [key: string]: Draft6Schema | boolean; };
   additionalProperties?: Draft6Schema | boolean;
-  patternProperties?: { [key: string]: Draft6Schema | boolean };
+  patternProperties?: { [key: string]: Draft6Schema | boolean; };
   $ref?: string;
   required?: string[];
   additionalItems?: Draft6Schema | boolean;
@@ -47,8 +47,8 @@ export class Draft6Schema {
 
   /**
    * Takes a deep copy of the input object and converts it to an instance of Draft6Schema.
-   *
-   * @param object
+   * 
+   * @param object 
    */
   static toSchema(object: Record<string, unknown>): Draft6Schema {
     const convertedSchema = Draft6Schema.internalToSchema(object);
@@ -57,11 +57,7 @@ export class Draft6Schema {
     }
     throw new Error('Could not convert input to expected copy of Draft6Schema');
   }
-  // eslint-disable-next-line sonarjs/cognitive-complexity
-  private static internalToSchema(
-    object: any,
-    seenSchemas: Map<any, Draft6Schema> = new Map()
-  ): any {
+  private static internalToSchema(object: any, seenSchemas: Map<any, Draft6Schema> = new Map()): any {
     // if primitive types return as is
     if (null === object || 'object' !== typeof object) {
       return object;
@@ -74,10 +70,7 @@ export class Draft6Schema {
     if (object instanceof Array) {
       const copy: any = [];
       for (let i = 0, len = object.length; i < len; i++) {
-        copy[Number(i)] = Draft6Schema.internalToSchema(
-          object[Number(i)],
-          seenSchemas
-        );
+        copy[Number(i)] = Draft6Schema.internalToSchema(object[Number(i)], seenSchemas);
       }
       return copy;
     }
@@ -85,35 +78,14 @@ export class Draft6Schema {
     const schema = new Draft6Schema();
     seenSchemas.set(object, schema);
     for (const [propName, prop] of Object.entries(object)) {
-      if (prop === undefined) {
-        continue;
-      }
-      let copyProp: any = prop;
+      let copyProp = prop;
 
       // Ignore value properties (those with `any` type) as they should be saved as is regardless of value
-      if (
-        propName !== 'default' &&
+      if (propName !== 'default' &&
         propName !== 'examples' &&
         propName !== 'const' &&
-        propName !== 'enum'
-      ) {
-        // Special cases are properties that should be a basic object
-        if (
-          propName === 'properties' ||
-          propName === 'patternProperties' ||
-          propName === 'definitions' ||
-          propName === 'dependencies'
-        ) {
-          copyProp = {};
-          for (const [propName2, prop2] of Object.entries(prop as any)) {
-            copyProp[String(propName2)] = Draft6Schema.internalToSchema(
-              prop2,
-              seenSchemas
-            );
-          }
-        } else {
-          copyProp = Draft6Schema.internalToSchema(prop, seenSchemas);
-        }
+        propName !== 'enum') {
+        copyProp = Draft6Schema.internalToSchema(prop, seenSchemas);
       }
       (schema as any)[String(propName)] = copyProp;
     }

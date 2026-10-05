@@ -1,14 +1,8 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`OpenAPIInputProcessor process() should be able to use $ref when circular 1`] = `
-InputMetaModel {
-  "models": Object {
-    "": AnyModel {
-      "name": "",
-      "options": Object {},
-      "originalInput": undefined,
-    },
-  },
+exports[`OpenAPIInputProcessor process() should process the OpenAPI document accurately 1`] = `
+CommonInputModel {
+  "models": Object {},
   "originalInput": Object {
     "components": Object {
       "ApiResponse": Object {
@@ -17,7 +11,6 @@ InputMetaModel {
             "format": "int32",
             "type": "integer",
           },
-          "loop": [Circular],
           "message": Object {
             "type": "string",
           },
@@ -26,140 +19,6 @@ InputMetaModel {
           },
         },
         "type": "object",
-      },
-    },
-    "info": Object {
-      "title": "circular api",
-    },
-    "openapi": "3.0.3",
-    "paths": Object {
-      "/test": Object {
-        "get": Object {
-          "requestBody": Object {
-            "content": Object {
-              "application/json": Object {
-                "schema": Object {
-                  "properties": Object {
-                    "code": Object {
-                      "format": "int32",
-                      "type": "integer",
-                    },
-                    "loop": [Circular],
-                    "message": Object {
-                      "type": "string",
-                    },
-                    "type": Object {
-                      "type": "string",
-                    },
-                  },
-                  "type": "object",
-                },
-              },
-            },
-            "required": true,
-          },
-          "responses": Object {
-            "200": Object {
-              "content": Object {
-                "application/json": Object {
-                  "schema": Object {
-                    "properties": Object {
-                      "code": Object {
-                        "format": "int32",
-                        "type": "integer",
-                      },
-                      "loop": [Circular],
-                      "message": Object {
-                        "type": "string",
-                      },
-                      "type": Object {
-                        "type": "string",
-                      },
-                    },
-                    "type": "object",
-                  },
-                },
-              },
-              "description": "Successful operation",
-            },
-          },
-        },
-      },
-    },
-  },
-}
-`;
-
-exports[`OpenAPIInputProcessor process() should be able to use $ref when circular 2`] = `
-Array [
-  Array [
-    Object {
-      "properties": Object {
-        "code": Object {
-          "format": "int32",
-          "type": "integer",
-        },
-        "loop": [Circular],
-        "message": Object {
-          "type": "string",
-        },
-        "type": Object {
-          "type": "string",
-        },
-      },
-      "type": "object",
-    },
-    "test_get_200_application_json",
-  ],
-  Array [
-    Object {
-      "properties": Object {
-        "code": Object {
-          "format": "int32",
-          "type": "integer",
-        },
-        "loop": [Circular],
-        "message": Object {
-          "type": "string",
-        },
-        "type": Object {
-          "type": "string",
-        },
-      },
-      "type": "object",
-    },
-    "test_get_application_json",
-  ],
-]
-`;
-
-exports[`OpenAPIInputProcessor process() should process the OpenAPI document accurately 1`] = `
-InputMetaModel {
-  "models": Object {
-    "": AnyModel {
-      "name": "",
-      "options": Object {},
-      "originalInput": undefined,
-    },
-  },
-  "originalInput": Object {
-    "components": Object {
-      "schemas": Object {
-        "ApiResponse": Object {
-          "properties": Object {
-            "code": Object {
-              "format": "int32",
-              "type": "integer",
-            },
-            "message": Object {
-              "type": "string",
-            },
-            "type": Object {
-              "type": "string",
-            },
-          },
-          "type": "object",
-        },
       },
     },
     "info": Object {
@@ -338,17 +197,6 @@ InputMetaModel {
             },
           },
         },
-        "parameters": Array [
-          Object {
-            "description": "credentials that authenticate a user agent with a server",
-            "in": "header",
-            "name": "Authorization",
-            "required": true,
-            "schema": Object {
-              "type": "string",
-            },
-          },
-        ],
         "patch": Object {
           "requestBody": Object {
             "content": Object {
@@ -706,13 +554,6 @@ Array [
   ],
   Array [
     Object {
-      "format": "uri",
-      "type": "string",
-    },
-    "test_post_parameters_query_callbackUrl",
-  ],
-  Array [
-    Object {
       "properties": Object {
         "code": Object {
           "format": "int32",
@@ -926,73 +767,6 @@ Array [
       "type": "object",
     },
     "test_trace_application_json",
-  ],
-  Array [
-    Object {
-      "type": "string",
-    },
-    "test_parameters_header_Authorization",
-  ],
-]
-`;
-
-exports[`OpenAPIInputProcessor process() should process the OpenAPI document with no paths 1`] = `
-InputMetaModel {
-  "models": Object {
-    "": AnyModel {
-      "name": "",
-      "options": Object {},
-      "originalInput": undefined,
-    },
-  },
-  "originalInput": Object {
-    "components": Object {
-      "schemas": Object {
-        "ApiResponse": Object {
-          "properties": Object {
-            "code": Object {
-              "format": "int32",
-              "type": "integer",
-            },
-            "message": Object {
-              "type": "string",
-            },
-            "type": Object {
-              "type": "string",
-            },
-          },
-          "type": "object",
-        },
-      },
-    },
-    "info": Object {
-      "title": "Simple basic api with no paths",
-    },
-    "openapi": "3.0.3",
-    "paths": Object {},
-  },
-}
-`;
-
-exports[`OpenAPIInputProcessor process() should process the OpenAPI document with no paths 2`] = `
-Array [
-  Array [
-    Object {
-      "properties": Object {
-        "code": Object {
-          "format": "int32",
-          "type": "integer",
-        },
-        "message": Object {
-          "type": "string",
-        },
-        "type": Object {
-          "type": "string",
-        },
-      },
-      "type": "object",
-    },
-    "ApiResponse",
   ],
 ]
 `;

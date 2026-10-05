@@ -2,14 +2,14 @@
 
 exports[`JAVA_COMMON_PRESET should render accurately when there is no additional properties 1`] = `
 "public class Clazz {
-  private boolean requiredProp;
+  private Boolean requiredProp;
   private String stringProp;
   private Double numberProp;
   private Boolean booleanProp;
   private String[] arrayProp;
 
-  public boolean getRequiredProp() { return this.requiredProp; }
-  public void setRequiredProp(boolean requiredProp) { this.requiredProp = requiredProp; }
+  public Boolean getRequiredProp() { return this.requiredProp; }
+  public void setRequiredProp(Boolean requiredProp) { this.requiredProp = requiredProp; }
 
   public String getStringProp() { return this.stringProp; }
   public void setStringProp(String stringProp) { this.stringProp = stringProp; }
@@ -71,15 +71,15 @@ exports[`JAVA_COMMON_PRESET should render accurately when there is no additional
 
 exports[`JAVA_COMMON_PRESET should render common function in class by common preset 1`] = `
 "public class Clazz {
-  private boolean requiredProp;
+  private Boolean requiredProp;
   private String stringProp;
   private Double numberProp;
   private Boolean booleanProp;
   private String[] arrayProp;
   private Map<String, Object> additionalProperties;
 
-  public boolean getRequiredProp() { return this.requiredProp; }
-  public void setRequiredProp(boolean requiredProp) { this.requiredProp = requiredProp; }
+  public Boolean getRequiredProp() { return this.requiredProp; }
+  public void setRequiredProp(Boolean requiredProp) { this.requiredProp = requiredProp; }
 
   public String getStringProp() { return this.stringProp; }
   public void setStringProp(String stringProp) { this.stringProp = stringProp; }
@@ -142,130 +142,19 @@ exports[`JAVA_COMMON_PRESET should render common function in class by common pre
     return o.toString().replace(\\"\\\\n\\", \\"\\\\n    \\");
   }
 }"
-`;
-
-exports[`JAVA_COMMON_PRESET with option should not render any functions when all 4 options are disabled 1`] = `
-"public class Clazz {
-  private boolean requiredProp;
-  private String stringProp;
-  private Double numberProp;
-  private Boolean booleanProp;
-  private String[] arrayProp;
-  private Map<String, Object> additionalProperties;
-
-  public boolean getRequiredProp() { return this.requiredProp; }
-  public void setRequiredProp(boolean requiredProp) { this.requiredProp = requiredProp; }
-
-  public String getStringProp() { return this.stringProp; }
-  public void setStringProp(String stringProp) { this.stringProp = stringProp; }
-
-  public Double getNumberProp() { return this.numberProp; }
-  public void setNumberProp(Double numberProp) { this.numberProp = numberProp; }
-
-  public Boolean getBooleanProp() { return this.booleanProp; }
-  public void setBooleanProp(Boolean booleanProp) { this.booleanProp = booleanProp; }
-
-  public String[] getArrayProp() { return this.arrayProp; }
-  public void setArrayProp(String[] arrayProp) { this.arrayProp = arrayProp; }
-
-  public Map<String, Object> getAdditionalProperties() { return this.additionalProperties; }
-  public void setAdditionalProperties(Map<String, Object> additionalProperties) { this.additionalProperties = additionalProperties; }
-}"
-`;
-
-exports[`JAVA_COMMON_PRESET with option should not render anything when isExtended is true 1`] = `
-Array [
-  "public class ExtendDoc implements Extend {
-  private String extendProp;
-  private Map<String, Object> additionalProperties;
-
-  @Override
-  public String getExtendProp() { return this.extendProp; }
-  @Override
-  public void setExtendProp(String extendProp) { this.extendProp = extendProp; }
-
-  public Map<String, Object> getAdditionalProperties() { return this.additionalProperties; }
-  public void setAdditionalProperties(Map<String, Object> additionalProperties) { this.additionalProperties = additionalProperties; }
-
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    ExtendDoc self = (ExtendDoc) o;
-      return 
-        Objects.equals(this.extendProp, self.extendProp) &&
-        Objects.equals(this.additionalProperties, self.additionalProperties);
-  }
-
-  @Override
-  public int hashCode() {
-    return Objects.hash((Object)extendProp, (Object)additionalProperties);
-  }
-
-  @Override
-  public String toString() {
-    return \\"class ExtendDoc {\\\\n\\" +   
-      \\"    extendProp: \\" + toIndentedString(extendProp) + \\"\\\\n\\" +
-      \\"    additionalProperties: \\" + toIndentedString(additionalProperties) + \\"\\\\n\\" +
-    \\"}\\";
-  }
-
-  /**
-   * Convert the given object to string with each line indented by 4 spaces
-   * (except the first line).
-   */
-  private String toIndentedString(Object o) {
-    if (o == null) {
-      return \\"null\\";
-    }
-    return o.toString().replace(\\"\\\\n\\", \\"\\\\n    \\");
-  }
-
-  public String marshal() {
-    List<String> propList = new ArrayList();
-      if(this.extendProp != null) {
-            propList.add(\\"extendProp:\\"+this.extendProp.toString());
-        }
-    if(this.additionalProperties != null) {
-            propList.add(\\"additionalProperties:\\"+this.additionalProperties.toString());
-        }
-    return propList.stream().collect(Collectors.joining(\\",\\"));
-  }
-
-  public static ExtendDoc unmarshal(String json) {
-    ExtendDoc result = new ExtendDoc();
-    JSONObject jsonObject = new JSONObject(json);
-      if(jsonObject.has(\\"extendProp\\")) {
-            result.setExtendProp(jsonObject.getString(\\"extendProp\\"));
-          }
-    if(jsonObject.has(\\"additionalProperties\\")) {
-            result.setAdditionalProperties(jsonObject.getMap<String, Object>(\\"additionalProperties\\"));
-          }
-    return result;
-  }
-}",
-  "public interface Extend {
-  String getExtendProp();
-  void setExtendProp(String extendProp);
-}",
-]
 `;
 
 exports[`JAVA_COMMON_PRESET with option should render all functions 1`] = `
 "public class Clazz {
-  private boolean requiredProp;
+  private Boolean requiredProp;
   private String stringProp;
   private Double numberProp;
   private Boolean booleanProp;
   private String[] arrayProp;
   private Map<String, Object> additionalProperties;
 
-  public boolean getRequiredProp() { return this.requiredProp; }
-  public void setRequiredProp(boolean requiredProp) { this.requiredProp = requiredProp; }
+  public Boolean getRequiredProp() { return this.requiredProp; }
+  public void setRequiredProp(Boolean requiredProp) { this.requiredProp = requiredProp; }
 
   public String getStringProp() { return this.stringProp; }
   public void setStringProp(String stringProp) { this.stringProp = stringProp; }
@@ -327,20 +216,50 @@ exports[`JAVA_COMMON_PRESET with option should render all functions 1`] = `
     }
     return o.toString().replace(\\"\\\\n\\", \\"\\\\n    \\");
   }
+}"
+`;
+
+
+exports[`JAVA_COMMON_PRESET with option should not render any functions when all 3 options are disabled 1`] = `
+"public class Clazz {
+  private Boolean requiredProp;
+  private String stringProp;
+  private Double numberProp;
+  private Boolean booleanProp;
+  private String[] arrayProp;
+  private Map<String, Object> additionalProperties;
+
+  public Boolean getRequiredProp() { return this.requiredProp; }
+  public void setRequiredProp(Boolean requiredProp) { this.requiredProp = requiredProp; }
+
+  public String getStringProp() { return this.stringProp; }
+  public void setStringProp(String stringProp) { this.stringProp = stringProp; }
+
+  public Double getNumberProp() { return this.numberProp; }
+  public void setNumberProp(Double numberProp) { this.numberProp = numberProp; }
+
+  public Boolean getBooleanProp() { return this.booleanProp; }
+  public void setBooleanProp(Boolean booleanProp) { this.booleanProp = booleanProp; }
+
+  public String[] getArrayProp() { return this.arrayProp; }
+  public void setArrayProp(String[] arrayProp) { this.arrayProp = arrayProp; }
+
+  public Map<String, Object> getAdditionalProperties() { return this.additionalProperties; }
+  public void setAdditionalProperties(Map<String, Object> additionalProperties) { this.additionalProperties = additionalProperties; }
 }"
 `;
 
 exports[`JAVA_COMMON_PRESET with option should render classToString 1`] = `
 "public class Clazz {
-  private boolean requiredProp;
+  private Boolean requiredProp;
   private String stringProp;
   private Double numberProp;
   private Boolean booleanProp;
   private String[] arrayProp;
   private Map<String, Object> additionalProperties;
 
-  public boolean getRequiredProp() { return this.requiredProp; }
-  public void setRequiredProp(boolean requiredProp) { this.requiredProp = requiredProp; }
+  public Boolean getRequiredProp() { return this.requiredProp; }
+  public void setRequiredProp(Boolean requiredProp) { this.requiredProp = requiredProp; }
 
   public String getStringProp() { return this.stringProp; }
   public void setStringProp(String stringProp) { this.stringProp = stringProp; }
@@ -384,15 +303,15 @@ exports[`JAVA_COMMON_PRESET with option should render classToString 1`] = `
 
 exports[`JAVA_COMMON_PRESET with option should render equals 1`] = `
 "public class Clazz {
-  private boolean requiredProp;
+  private Boolean requiredProp;
   private String stringProp;
   private Double numberProp;
   private Boolean booleanProp;
   private String[] arrayProp;
   private Map<String, Object> additionalProperties;
 
-  public boolean getRequiredProp() { return this.requiredProp; }
-  public void setRequiredProp(boolean requiredProp) { this.requiredProp = requiredProp; }
+  public Boolean getRequiredProp() { return this.requiredProp; }
+  public void setRequiredProp(Boolean requiredProp) { this.requiredProp = requiredProp; }
 
   public String getStringProp() { return this.stringProp; }
   public void setStringProp(String stringProp) { this.stringProp = stringProp; }
@@ -431,15 +350,15 @@ exports[`JAVA_COMMON_PRESET with option should render equals 1`] = `
 
 exports[`JAVA_COMMON_PRESET with option should render hashCode 1`] = `
 "public class Clazz {
-  private boolean requiredProp;
+  private Boolean requiredProp;
   private String stringProp;
   private Double numberProp;
   private Boolean booleanProp;
   private String[] arrayProp;
   private Map<String, Object> additionalProperties;
 
-  public boolean getRequiredProp() { return this.requiredProp; }
-  public void setRequiredProp(boolean requiredProp) { this.requiredProp = requiredProp; }
+  public Boolean getRequiredProp() { return this.requiredProp; }
+  public void setRequiredProp(Boolean requiredProp) { this.requiredProp = requiredProp; }
 
   public String getStringProp() { return this.stringProp; }
   public void setStringProp(String stringProp) { this.stringProp = stringProp; }
@@ -459,82 +378,6 @@ exports[`JAVA_COMMON_PRESET with option should render hashCode 1`] = `
   @Override
   public int hashCode() {
     return Objects.hash((Object)requiredProp, (Object)stringProp, (Object)numberProp, (Object)booleanProp, (Object)arrayProp, (Object)additionalProperties);
-  }
-}"
-`;
-
-exports[`JAVA_COMMON_PRESET with option should render un/marshal 1`] = `
-"public class Clazz {
-  private boolean requiredProp;
-  private String stringProp;
-  private Double numberProp;
-  private Boolean booleanProp;
-  private String[] arrayProp;
-  private Map<String, Object> additionalProperties;
-
-  public boolean getRequiredProp() { return this.requiredProp; }
-  public void setRequiredProp(boolean requiredProp) { this.requiredProp = requiredProp; }
-
-  public String getStringProp() { return this.stringProp; }
-  public void setStringProp(String stringProp) { this.stringProp = stringProp; }
-
-  public Double getNumberProp() { return this.numberProp; }
-  public void setNumberProp(Double numberProp) { this.numberProp = numberProp; }
-
-  public Boolean getBooleanProp() { return this.booleanProp; }
-  public void setBooleanProp(Boolean booleanProp) { this.booleanProp = booleanProp; }
-
-  public String[] getArrayProp() { return this.arrayProp; }
-  public void setArrayProp(String[] arrayProp) { this.arrayProp = arrayProp; }
-
-  public Map<String, Object> getAdditionalProperties() { return this.additionalProperties; }
-  public void setAdditionalProperties(Map<String, Object> additionalProperties) { this.additionalProperties = additionalProperties; }
-
-  public String marshal() {
-    List<String> propList = new ArrayList();
-      if(this.requiredProp != null) {
-            propList.add(\\"requiredProp:\\"+this.requiredProp.toString());
-        }
-    if(this.stringProp != null) {
-            propList.add(\\"stringProp:\\"+this.stringProp.toString());
-        }
-    if(this.numberProp != null) {
-            propList.add(\\"numberProp:\\"+this.numberProp.toString());
-        }
-    if(this.booleanProp != null) {
-            propList.add(\\"booleanProp:\\"+this.booleanProp.toString());
-        }
-    if(this.arrayProp != null) {
-            propList.add(\\"arrayProp:\\"+this.arrayProp.toString());
-        }
-    if(this.additionalProperties != null) {
-            propList.add(\\"additionalProperties:\\"+this.additionalProperties.toString());
-        }
-    return propList.stream().collect(Collectors.joining(\\",\\"));
-  }
-
-  public static Clazz unmarshal(String json) {
-    Clazz result = new Clazz();
-    JSONObject jsonObject = new JSONObject(json);
-      if(jsonObject.has(\\"requiredProp\\")) {
-            result.setRequiredProp(jsonObject.getBoolean(\\"requiredProp\\"));
-          }
-    if(jsonObject.has(\\"stringProp\\")) {
-            result.setStringProp(jsonObject.getString(\\"stringProp\\"));
-          }
-    if(jsonObject.has(\\"numberProp\\")) {
-            result.setNumberProp(jsonObject.getDouble(\\"numberProp\\"));
-          }
-    if(jsonObject.has(\\"booleanProp\\")) {
-            result.setBooleanProp(jsonObject.getBoolean(\\"booleanProp\\"));
-          }
-    if(jsonObject.has(\\"arrayProp\\")) {
-            result.setArrayProp(jsonObject.getString[](\\"arrayProp\\"));
-          }
-    if(jsonObject.has(\\"additionalProperties\\")) {
-            result.setAdditionalProperties(jsonObject.getMap<String, Object>(\\"additionalProperties\\"));
-          }
-    return result;
   }
 }"
 `;

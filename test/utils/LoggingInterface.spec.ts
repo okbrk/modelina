@@ -1,7 +1,6 @@
-import { ModelLoggingInterface, Logger } from '../../src';
+import {ModelLoggingInterface, Logger} from '../../src'; 
 
 describe('LoggingInterface', () => {
-  // eslint-disable-next-line jest/expect-expect
   test('should work when no logging interface have been defined', () => {
     Logger.setLogger(undefined);
     Logger.debug('test', {}, 'test2');

@@ -1,14 +1,13 @@
-import { ConstrainedObjectPropertyModel } from '../../../models';
-import { TypeScriptOptions } from '../TypeScriptGenerator';
-import { TypeScriptObjectRenderer } from '../TypeScriptObjectRenderer';
-import { ClassPresetType } from '../TypeScriptPreset';
+import { TypeScriptRenderer } from '../TypeScriptRenderer';
+import { CommonModel, ClassPreset, PropertyType } from '../../../models';
+import { getUniquePropertyName, DefaultPropertyNames } from '../../../helpers';
 
 /**
  * Renderer for TypeScript's `class` type
- *
+ * 
  * @extends TypeScriptRenderer
  */
-export class ClassRenderer extends TypeScriptObjectRenderer {
+export class ClassRenderer extends TypeScriptRenderer {
   public async defaultSelf(): Promise<string> {
     const content = [
       await this.renderProperties(),
@@ -17,7 +16,8 @@ export class ClassRenderer extends TypeScriptObjectRenderer {
       await this.runAdditionalContentPreset()
     ];
 
-    return `class ${this.model.name} {
+    const formattedName = this.nameType(this.model.$id);
+    return `class ${formattedName} {
 ${this.indent(this.renderBlock(content, 2))}
 }`;
   }
@@ -27,44 +27,55 @@ ${this.indent(this.renderBlock(content, 2))}
   }
 
   async renderAccessors(): Promise<string> {
-    const properties = this.model.properties;
+    const properties = this.model.properties || {};
     const content: string[] = [];
 
-    for (const property of Object.values(properties)) {
-      const getter = await this.runGetterPreset(property);
-      const setter = await this.runSetterPreset(property);
+    for (const [propertyName, property] of Object.entries(properties)) {
+      const getter = await this.runGetterPreset(propertyName, property);
+      const setter = await this.runSetterPreset(propertyName, property);
       content.push(this.renderBlock([getter, setter]));
+    }
+    if (this.model.additionalProperties !== undefined) {
+      const propertyName = getUniquePropertyName(this.model, DefaultPropertyNames.additionalProperties);
+      const getter = await this.runGetterPreset(propertyName, this.model.additionalProperties, PropertyType.additionalProperty);
+      const setter = await this.runSetterPreset(propertyName, this.model.additionalProperties, PropertyType.additionalProperty);
+      content.push(this.renderBlock([getter, setter]));
+    }
+
+    if (this.model.patternProperties !== undefined) {
+      for (const [pattern, patternModel] of Object.entries(this.model.patternProperties)) {
+        const propertyName = getUniquePropertyName(this.model, `${pattern}${DefaultPropertyNames.patternProperties}`);
+        const getter = await this.runGetterPreset(propertyName, patternModel, PropertyType.patternProperties);
+        const setter = await this.runSetterPreset(propertyName, patternModel, PropertyType.patternProperties);
+        content.push(this.renderBlock([getter, setter]));
+      }
     }
 
     return this.renderBlock(content, 2);
   }
 
-  runGetterPreset(property: ConstrainedObjectPropertyModel): Promise<string> {
-    return this.runPreset('getter', { property });
+  runGetterPreset(propertyName: string, property: CommonModel, type: PropertyType = PropertyType.property): Promise<string> {
+    return this.runPreset('getter', { propertyName, property, type });
   }
 
-  runSetterPreset(property: ConstrainedObjectPropertyModel): Promise<string> {
-    return this.runPreset('setter', { property });
+  runSetterPreset(propertyName: string, property: CommonModel, type: PropertyType = PropertyType.property): Promise<string> {
+    return this.runPreset('setter', { propertyName, property, type });
   }
 }
 
-export const TS_DEFAULT_CLASS_PRESET: ClassPresetType<TypeScriptOptions> = {
-  self({ renderer }) {
-    return renderer.defaultSelf();
+export const TS_DEFAULT_CLASS_PRESET: ClassPreset<ClassRenderer> = {
+  async self({ renderer }): Promise<string> {
+    return `export ${await renderer.defaultSelf()}`;
   },
-  ctor({ renderer, model }): string {
+  ctor({ renderer, model }) : string {
     const properties = model.properties || {};
-    const assignments: string[] = [];
-    const ctorProperties: string[] = [];
-
-    for (const [propertyName, property] of Object.entries(properties)) {
-      // if const value exists we should not render it in the constructor
-      if (property.property.options.const) {
-        continue;
-      }
-      assignments.push(`this._${propertyName} = input.${propertyName};`);
-      ctorProperties.push(renderer.renderProperty(property).replace(';', ','));
-    }
+    const assignments = Object.entries(properties).map(([propertyName, property]) => {
+      propertyName = renderer.nameProperty(propertyName, property);
+      return `this._${propertyName} = input.${propertyName};`;
+    });
+    const ctorProperties = Object.entries(properties).map(([propertyName, property]) => {
+      return renderer.renderProperty(propertyName, property).replace(';', ',');
+    });
 
     return `constructor(input: {
 ${renderer.indent(renderer.renderBlock(ctorProperties))}
@@ -72,28 +83,31 @@ ${renderer.indent(renderer.renderBlock(ctorProperties))}
 ${renderer.indent(renderer.renderBlock(assignments))}
 }`;
   },
-  property({ renderer, property }): string {
-    return `private _${renderer.renderProperty(property)}`;
+  property({ renderer, propertyName, property, type }): string {
+    return `private _${renderer.renderProperty(propertyName, property, type)}`;
   },
-  getter({ property }): string {
-    return `get ${property.propertyName}(): ${
-      property.property.options.const?.value
-        ? property.property.options.const.value
-        : property.property.type
-    }${property.required === false ? ' | undefined' : ''} { return this._${
-      property.propertyName
-    }; }`;
-  },
-  setter({ property }): string {
-    // if const value exists we should not render a setter
-    if (property.property.options.const?.value) {
-      return '';
+  getter({ renderer, model, propertyName, property, type }): string {
+    const isRequired = model.isRequired(propertyName);
+    propertyName = renderer.nameProperty(propertyName, property);
+    let signature = ''; 
+    if (type === PropertyType.property) {
+      signature = renderer.renderTypeSignature(property, { orUndefined: !isRequired });
+    } else if (type === PropertyType.additionalProperty || type === PropertyType.patternProperties) {
+      const mapType = renderer.renderType(property);
+      signature = `: Map<String, ${mapType}> | undefined`;
     }
-
-    return `set ${property.propertyName}(${property.propertyName}: ${
-      property.property.type
-    }${property.required === false ? ' | undefined' : ''}) { this._${
-      property.propertyName
-    } = ${property.propertyName}; }`;
-  }
+    return `get ${propertyName}()${signature} { return this._${propertyName}; }`;
+  },
+  setter({ renderer, model, propertyName, property, type }): string {
+    const isRequired = model.isRequired(propertyName);
+    propertyName = renderer.nameProperty(propertyName, property);
+    let signature = ''; 
+    if (type === PropertyType.property) {
+      signature = renderer.renderTypeSignature(property, { orUndefined: !isRequired });
+    } else if (type === PropertyType.additionalProperty || type === PropertyType.patternProperties) {
+      const mapType = renderer.renderType(property);
+      signature = `: Map<String, ${mapType}> | undefined`;
+    }
+    return `set ${propertyName}(${propertyName}${signature}) { this._${propertyName} = ${propertyName}; }`;
+  },
 };

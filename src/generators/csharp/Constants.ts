@@ -1,10 +1,3 @@
-import { checkForReservedKeyword } from '../../helpers';
-import {
-  ConstrainedObjectPropertyModel,
-  ConstrainedEnumModel,
-  ConstrainedReferenceModel
-} from '../../models';
-
 export const RESERVED_CSHARP_KEYWORDS = [
   'abstract',
   'as',
@@ -57,7 +50,6 @@ export const RESERVED_CSHARP_KEYWORDS = [
   'protected',
   'public',
   'readonly',
-  'record',
   'ref',
   'return',
   'sbyte',
@@ -86,59 +78,6 @@ export const RESERVED_CSHARP_KEYWORDS = [
   'while'
 ];
 
-export function isReservedCSharpKeyword(
-  word: string,
-  forceLowerCase = true
-): boolean {
-  return checkForReservedKeyword(
-    word,
-    RESERVED_CSHARP_KEYWORDS,
-    forceLowerCase
-  );
-}
-
-const STRING_RENDERING_TYPES = [
-  'System.TimeSpan',
-  'System.DateTime',
-  'System.DateTimeOffset',
-  'System.Guid'
-];
-
-const PRIMITIVES = [
-  'bool',
-  'byte',
-  'sbyte',
-  'char',
-  'decimal',
-  'double',
-  'float',
-  'int',
-  'uint',
-  'long',
-  'ulong',
-  'short',
-  'ushort'
-];
-
-export function isStringRenderingType(
-  property: ConstrainedObjectPropertyModel
-): boolean {
-  return STRING_RENDERING_TYPES.includes(property.property.type);
-}
-
-export function isPrimitive(property: ConstrainedObjectPropertyModel): boolean {
-  return PRIMITIVES.includes(property.property.type);
-}
-
-export function isEnum(property: ConstrainedObjectPropertyModel): boolean {
-  if (
-    property.property &&
-    property.property instanceof ConstrainedReferenceModel &&
-    property.property.ref !== undefined &&
-    property.property.ref instanceof ConstrainedEnumModel
-  ) {
-    return true;
-  }
-
-  return false;
+export function isReservedCSharpKeyword(word: string): boolean {
+  return RESERVED_CSHARP_KEYWORDS.includes(word);
 }

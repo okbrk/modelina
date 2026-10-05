@@ -1,37 +1,28 @@
 import { CSharpRenderer } from '../CSharpRenderer';
-import {
-  ConstrainedDictionaryModel,
-  ConstrainedObjectModel,
-  ConstrainedObjectPropertyModel
-} from '../../../models';
+import { ClassPreset, CommonModel, PropertyType } from '../../../models';
+import { DefaultPropertyNames, getUniquePropertyName } from '../../../helpers';
 import { pascalCase } from 'change-case';
-import { CsharpClassPreset } from '../CSharpPreset';
-import { CSharpOptions } from '../CSharpGenerator';
-import { isPrimitive, isEnum, isStringRenderingType } from '../Constants';
 
 /**
  * Renderer for CSharp's `struct` type
- *
+ * 
  * @extends CSharpRenderer
  */
-export class ClassRenderer extends CSharpRenderer<ConstrainedObjectModel> {
+export class ClassRenderer extends CSharpRenderer {
   public async defaultSelf(): Promise<string> {
     const content = [
       await this.renderProperties(),
       await this.runCtorPreset(),
       await this.renderAccessors(),
-      await this.runAdditionalContentPreset()
+      await this.runAdditionalContentPreset(),
     ];
-
-    if (
-      this.options?.collectionType === 'List' ||
-      this.model.containsPropertyType(ConstrainedDictionaryModel)
-    ) {
-      this.dependencyManager.addDependency('using System.Collections.Generic;');
+    
+    if (this.model.additionalProperties !== undefined || this.model.patternProperties !== undefined) {
+      this.addDependency('using System.Collections.Generic;');
     }
 
-    return `public partial class ${this.model.name}
-{
+    const formattedName = this.nameType(this.model.$id);
+    return `public class ${formattedName} {
 ${this.indent(this.renderBlock(content, 2))}
 }`;
   }
@@ -40,20 +31,58 @@ ${this.indent(this.renderBlock(content, 2))}
     const properties = this.model.properties || {};
     const content: string[] = [];
 
-    for (const property of Object.values(properties)) {
-      const rendererProperty = await this.runPropertyPreset(property);
+    for (const [propertyName, property] of Object.entries(properties)) {
+      const rendererProperty = await this.runPropertyPreset(propertyName, property);
       content.push(rendererProperty);
+    }
+    
+    if (this.model.additionalProperties !== undefined) {
+      const propertyName = getUniquePropertyName(this.model, DefaultPropertyNames.additionalProperties);
+      const additionalProperty = await this.runPropertyPreset(propertyName, this.model.additionalProperties, PropertyType.additionalProperty);
+      content.push(additionalProperty);
+    }
+
+    if (this.model.patternProperties !== undefined) {
+      for (const [pattern, patternModel] of Object.entries(this.model.patternProperties)) {
+        const propertyName = getUniquePropertyName(this.model, `${pattern}${DefaultPropertyNames.patternProperties}`);
+        const renderedPatternProperty = await this.runPropertyPreset(propertyName, patternModel, PropertyType.patternProperties);
+        content.push(renderedPatternProperty);
+      }
     }
 
     return this.renderBlock(content);
   }
 
+  async accessorFactory(property: CommonModel, propertyName: string, type: PropertyType): Promise<string> {
+    const formattedAccessorName = pascalCase(this.nameProperty(propertyName, property));
+    let propertyType = this.renderType(property);
+    if (type === PropertyType.additionalProperty || type === PropertyType.patternProperties) {
+      propertyType = `Dictionary<string, ${propertyType}>`;
+    }
+    return `public ${propertyType} ${formattedAccessorName} 
+{
+  ${await this.runGetterPreset(propertyName, property, type)}
+  ${await this.runSetterPreset(propertyName, property, type)}
+}`;
+  }
   async renderAccessors(): Promise<string> {
     const properties = this.model.properties || {};
     const content: string[] = [];
 
-    for (const property of Object.values(properties)) {
-      content.push(await this.runAccessorPreset(property));
+    for (const [propertyName, property] of Object.entries(properties)) {
+      content.push(await this.accessorFactory(property, propertyName, PropertyType.property));
+    }
+
+    if (this.model.additionalProperties !== undefined) {
+      const propertyName = getUniquePropertyName(this.model, DefaultPropertyNames.additionalProperties);
+      content.push(await this.accessorFactory(this.model.additionalProperties, propertyName, PropertyType.additionalProperty));
+    }
+
+    if (this.model.patternProperties !== undefined) {
+      for (const [pattern, patternModel] of Object.entries(this.model.patternProperties)) {
+        const propertyName = getUniquePropertyName(this.model, `${pattern}${DefaultPropertyNames.patternProperties}`);
+        content.push(await this.accessorFactory(patternModel, propertyName, PropertyType.patternProperties));
+      }
     }
 
     return this.renderBlock(content, 2);
@@ -63,105 +92,37 @@ ${this.indent(this.renderBlock(content, 2))}
     return this.runPreset('ctor');
   }
 
-  runAccessorPreset(property: ConstrainedObjectPropertyModel): Promise<string> {
-    return this.runPreset('accessor', {
-      property,
-      options: this.options,
-      renderer: this
-    });
+  runPropertyPreset(propertyName: string, property: CommonModel, type: PropertyType = PropertyType.property): Promise<string> {
+    return this.runPreset('property', { propertyName, property, type});
   }
 
-  runPropertyPreset(property: ConstrainedObjectPropertyModel): Promise<string> {
-    return this.runPreset('property', {
-      property,
-      options: this.options,
-      renderer: this
-    });
+  runGetterPreset(propertyName: string, property: CommonModel, type: PropertyType = PropertyType.property): Promise<string> {
+    return this.runPreset('getter', { propertyName, property, type});
   }
 
-  runGetterPreset(property: ConstrainedObjectPropertyModel): Promise<string> {
-    return this.runPreset('getter', {
-      property,
-      options: this.options,
-      renderer: this
-    });
-  }
-
-  runSetterPreset(property: ConstrainedObjectPropertyModel): Promise<string> {
-    return this.runPreset('setter', {
-      property,
-      options: this.options,
-      renderer: this
-    });
+  runSetterPreset(propertyName: string, property: CommonModel, type: PropertyType = PropertyType.property): Promise<string> {
+    return this.runPreset('setter', { propertyName, property, type});
   }
 }
 
-export const CSHARP_DEFAULT_CLASS_PRESET: CsharpClassPreset<CSharpOptions> = {
+export const CSHARP_DEFAULT_CLASS_PRESET: ClassPreset<ClassRenderer> = {
   self({ renderer }) {
     return renderer.defaultSelf();
   },
-  async property({ renderer, property, options }) {
-    let nullablePropertyEnding = '';
-    if (
-      options?.handleNullable &&
-      property.required &&
-      !isPrimitive(property) &&
-      !isEnum(property) &&
-      !isStringRenderingType(property)
-    ) {
-      nullablePropertyEnding = ' = null!';
+  property({ renderer, propertyName, property, type }) {
+    propertyName = renderer.nameProperty(propertyName, property);
+    let propertyType = renderer.renderType(property);
+    if (type === PropertyType.additionalProperty || type === PropertyType.patternProperties) {
+      propertyType = `Dictionary<string, ${propertyType}>`;
     }
-
-    if (options?.autoImplementedProperties) {
-      const getter = await renderer.runGetterPreset(property);
-      const setter = await renderer.runSetterPreset(property);
-
-      if (property.property.options.const) {
-        return `public const ${property.property.type} ${pascalCase(
-          property.propertyName
-        )} { ${getter} } = ${property.property.options.const.value};`;
-      }
-
-      const semiColon = nullablePropertyEnding !== '' ? ';' : '';
-      return `public ${property.property.type} ${pascalCase(
-        property.propertyName
-      )} { ${getter} ${setter} }${nullablePropertyEnding}${semiColon}`;
-    }
-
-    if (property.property.options.const) {
-      return `private const ${property.property.type} ${property.propertyName} = ${property.property.options.const.value};`;
-    }
-    return `private ${property.property.type} ${property.propertyName}${nullablePropertyEnding};`;
+    return `private ${propertyType} ${propertyName};`;
   },
-  async accessor({ renderer, options, property }) {
-    const formattedAccessorName = pascalCase(property.propertyName);
-    if (options?.autoImplementedProperties) {
-      return '';
-    }
-
-    if (property.property.options.const) {
-      return `public ${property.property.type} ${formattedAccessorName} 
-{
-  ${await renderer.runGetterPreset(property)}
-}`;
-    }
-
-    return `public ${property.property.type} ${formattedAccessorName} 
-{
-  ${await renderer.runGetterPreset(property)}
-  ${await renderer.runSetterPreset(property)}
-}`;
+  getter({ renderer, propertyName, property }) {
+    const formattedPropertyName = renderer.nameProperty(propertyName, property);
+    return `get { return ${formattedPropertyName}; }`;
   },
-  getter({ options, property }) {
-    if (options?.autoImplementedProperties) {
-      return 'get;';
-    }
-    return `get { return ${property.propertyName}; }`;
-  },
-  setter({ options, property }) {
-    if (options?.autoImplementedProperties) {
-      return 'set;';
-    }
-    return `set { this.${property.propertyName} = value; }`;
+  setter({ renderer, propertyName, property }) {
+    const formattedPropertyName = renderer.nameProperty(propertyName, property);
+    return `set { ${formattedPropertyName} = value; }`;
   }
 };

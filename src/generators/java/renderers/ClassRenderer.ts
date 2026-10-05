@@ -1,81 +1,31 @@
 import { JavaRenderer } from '../JavaRenderer';
-import {
-  ConstrainedDictionaryModel,
-  ConstrainedObjectModel,
-  ConstrainedObjectPropertyModel,
-  ConstrainedReferenceModel,
-  ConstrainedUnionModel
-} from '../../../models';
-import { FormatHelpers } from '../../../helpers';
-import { JavaOptions } from '../JavaGenerator';
-import { ClassPresetType } from '../JavaPreset';
-import { unionIncludesBuiltInTypes } from '../JavaConstrainer';
-import { isEnum } from '../../csharp/Constants';
-import { JavaImportUtils } from '../JavaImportUtils';
-import { JavaDefaultRendererUtil } from '../JavaDefaultRendererUtil';
+
+import { CommonModel, ClassPreset, PropertyType } from '../../../models';
+import { DefaultPropertyNames, FormatHelpers, getUniquePropertyName } from '../../../helpers';
 
 /**
  * Renderer for Java's `class` type
- *
+ * 
  * @extends JavaRenderer
  */
-export class ClassRenderer extends JavaRenderer<ConstrainedObjectModel> {
+export class ClassRenderer extends JavaRenderer {
   async defaultSelf(): Promise<string> {
     const content = [
       await this.renderProperties(),
       await this.runCtorPreset(),
       await this.renderAccessors(),
-      await this.runAdditionalContentPreset()
+      await this.runAdditionalContentPreset(),
     ];
 
-    JavaImportUtils.addCollectionDependencies(
-      this.options,
-      this.model.properties,
-      this.dependencyManager
-    );
-    JavaImportUtils.addDependenciesForStringTypes(
-      this.model.properties,
-      this.dependencyManager
-    );
-    const useOptional =
-      this.options?.useOptionalForNullableProperties &&
-      this.doesContainOptionalProperties();
-    if (useOptional) {
-      this.dependencyManager.addDependency('import java.util.Optional;');
-      this.dependencyManager.addDependency(
-        'import static java.util.Optional.ofNullable;'
-      );
+    if (this.options?.collectionType === 'List') {
+      this.addDependency('import java.util.List;');
     }
-
-    if (this.model.containsPropertyType(ConstrainedDictionaryModel)) {
-      this.dependencyManager.addDependency('import java.util.Map;');
+    if (this.model.additionalProperties !== undefined || this.model.patternProperties !== undefined) {
+      this.addDependency('import java.util.Map;');
     }
-
-    const abstractType = this.model.options.isExtended ? 'interface' : 'class';
-
-    const parentUnions = this.getParentUnions();
-    const extend = this.model.options.extend?.filter(
-      (extend) => extend.options.isExtended
-    );
-    const parents = [...(parentUnions ?? []), ...(extend ?? [])];
-
-    if (parents.length) {
-      for (const i of parents) {
-        this.dependencyManager.addModelDependency(i);
-      }
-
-      const inheritanceKeyword = this.model.options.isExtended
-        ? 'extends'
-        : 'implements';
-
-      return `public ${abstractType} ${
-        this.model.name
-      } ${inheritanceKeyword} ${parents.map((i) => i.name).join(', ')} {
-${this.indent(this.renderBlock(content, 2))}
-}`;
-    }
-
-    return `public ${abstractType} ${this.model.name} {
+    
+    const formattedName = this.nameType(`${this.model.$id}`);
+    return `public class ${formattedName} {
 ${this.indent(this.renderBlock(content, 2))}
 }`;
   }
@@ -91,16 +41,30 @@ ${this.indent(this.renderBlock(content, 2))}
     const properties = this.model.properties || {};
     const content: string[] = [];
 
-    for (const property of Object.values(properties)) {
-      const rendererProperty = await this.runPropertyPreset(property);
+    for (const [propertyName, property] of Object.entries(properties)) {
+      const rendererProperty = await this.runPropertyPreset(propertyName, property);
       content.push(rendererProperty);
+    }
+    
+    if (this.model.additionalProperties !== undefined) {
+      const propertyName = getUniquePropertyName(this.model, DefaultPropertyNames.additionalProperties);
+      const additionalProperty = await this.runPropertyPreset(propertyName, this.model.additionalProperties, PropertyType.additionalProperty);
+      content.push(additionalProperty);
+    }
+
+    if (this.model.patternProperties !== undefined) {
+      for (const [pattern, patternModel] of Object.entries(this.model.patternProperties)) {
+        const propertyName = getUniquePropertyName(this.model, `${pattern}${DefaultPropertyNames.patternProperties}`);
+        const renderedPatternProperty = await this.runPropertyPreset(propertyName, patternModel, PropertyType.patternProperties);
+        content.push(renderedPatternProperty);
+      }
     }
 
     return this.renderBlock(content);
   }
 
-  runPropertyPreset(property: ConstrainedObjectPropertyModel): Promise<string> {
-    return this.runPreset('property', { property });
+  runPropertyPreset(propertyName: string, property: CommonModel, type: PropertyType = PropertyType.property): Promise<string> {
+    return this.runPreset('property', { propertyName, property, type});
   }
 
   /**
@@ -110,238 +74,68 @@ ${this.indent(this.renderBlock(content, 2))}
     const properties = this.model.properties || {};
     const content: string[] = [];
 
-    for (const property of Object.values(properties)) {
-      const getter = await this.runGetterPreset(property);
-      const setter = await this.runSetterPreset(property);
+    for (const [propertyName, property] of Object.entries(properties)) {
+      const getter = await this.runGetterPreset(propertyName, property);
+      const setter = await this.runSetterPreset(propertyName, property);
       content.push(this.renderBlock([getter, setter]));
+    }
+
+    if (this.model.additionalProperties !== undefined) {
+      const propertyName = getUniquePropertyName(this.model, DefaultPropertyNames.additionalProperties);
+      const getter = await this.runGetterPreset(propertyName, this.model.additionalProperties, PropertyType.additionalProperty);
+      const setter = await this.runSetterPreset(propertyName, this.model.additionalProperties, PropertyType.additionalProperty);
+      content.push(this.renderBlock([getter, setter]));
+    }
+
+    if (this.model.patternProperties !== undefined) {
+      for (const [pattern, patternModel] of Object.entries(this.model.patternProperties)) {
+        const propertyName = getUniquePropertyName(this.model, `${pattern}${DefaultPropertyNames.patternProperties}`);
+        const getter = await this.runGetterPreset(propertyName, patternModel, PropertyType.patternProperties);
+        const setter = await this.runSetterPreset(propertyName, patternModel, PropertyType.patternProperties);
+        content.push(this.renderBlock([getter, setter]));
+      }
     }
 
     return this.renderBlock(content, 2);
   }
 
-  runGetterPreset(property: ConstrainedObjectPropertyModel): Promise<string> {
-    return this.runPreset('getter', { property });
+  runGetterPreset(propertyName: string, property: CommonModel, type: PropertyType = PropertyType.property): Promise<string> {
+    return this.runPreset('getter', { propertyName, property, type});
   }
 
-  runSetterPreset(property: ConstrainedObjectPropertyModel): Promise<string> {
-    return this.runPreset('setter', { property });
-  }
-
-  private getParentUnions(): ConstrainedUnionModel[] | undefined {
-    const parentUnions: ConstrainedUnionModel[] = [];
-
-    if (!this.model.options.parents) {
-      return undefined;
-    }
-
-    for (const model of this.model.options.parents) {
-      if (
-        model instanceof ConstrainedUnionModel &&
-        !unionIncludesBuiltInTypes(model)
-      ) {
-        parentUnions.push(model);
-      }
-    }
-
-    if (!parentUnions.length) {
-      return undefined;
-    }
-
-    return parentUnions;
-  }
-
-  private doesContainOptionalProperties(): boolean {
-    const properties = Object.values(this.model.properties);
-    return properties.some((prop) => !prop.required);
+  runSetterPreset(propertyName: string, property: CommonModel, type: PropertyType = PropertyType.property): Promise<string> {
+    return this.runPreset('setter', { propertyName, property, type});
   }
 }
 
-const getOverride = (
-  model: ConstrainedObjectModel,
-  property: ConstrainedObjectPropertyModel
-) => {
-  const isOverride = model.options.extend?.find((extend) => {
-    if (
-      !extend.options.isExtended ||
-      property.property instanceof ConstrainedDictionaryModel
-    ) {
-      return false;
-    }
-
-    if (
-      extend instanceof ConstrainedObjectModel &&
-      extend.properties[property.propertyName]
-    ) {
-      return true;
-    }
-
-    if (
-      extend instanceof ConstrainedReferenceModel &&
-      extend.ref instanceof ConstrainedObjectModel &&
-      extend.ref.properties[property.propertyName]
-    ) {
-      return true;
-    }
-  });
-
-  return isOverride ? '@Override\n' : '';
-};
-
-export const isDiscriminatorOrDictionary = (
-  model: ConstrainedObjectModel,
-  property: ConstrainedObjectPropertyModel
-): boolean =>
-  model.options.discriminator?.discriminator ===
-    property.unconstrainedPropertyName ||
-  property.property instanceof ConstrainedDictionaryModel;
-
-export const isDiscriminatorInTree = (
-  model: ConstrainedObjectModel,
-  property: ConstrainedObjectPropertyModel
-): boolean =>
-  (model.options?.extend?.some(
-    (ext) =>
-      ext?.options?.discriminator?.discriminator ===
-      property.unconstrainedPropertyName
-  ) ||
-    model.options?.parents?.some(
-      (parent) =>
-        parent?.options?.discriminator?.discriminator ===
-        property.unconstrainedPropertyName
-    )) ??
-  false;
-
-const isEnumImplementedByConstValue = (
-  model: ConstrainedObjectModel,
-  property: ConstrainedObjectPropertyModel
-): boolean => {
-  if (!isEnum(property)) {
-    return false;
-  }
-
-  if (!model.options.implementedBy) {
-    return false;
-  }
-
-  // if the implementedBy property exist in the model options, check if the property exists in the implementedBy model and check if the property is set with a const value
-  return model.options.implementedBy.some((implementedBy) => {
-    return (
-      implementedBy instanceof ConstrainedObjectModel &&
-      implementedBy.properties[property.propertyName] &&
-      implementedBy.properties[property.propertyName].property.options.const
-        ?.value
-    );
-  });
-};
-
-const isEnumOrEnumInExtended = (
-  model: ConstrainedObjectModel,
-  property: ConstrainedObjectPropertyModel
-): boolean => {
-  if (!isEnum(property)) {
-    return false;
-  }
-
-  if (!model.options.extend) {
-    return false;
-  }
-
-  return model.options.extend.some((extend) => {
-    return (
-      extend instanceof ConstrainedReferenceModel &&
-      extend.ref instanceof ConstrainedObjectModel &&
-      extend.ref.properties[property.propertyName] &&
-      isEnum(extend.ref.properties[property.propertyName])
-    );
-  });
-};
-
-export const JAVA_DEFAULT_CLASS_PRESET: ClassPresetType<JavaOptions> = {
+export const JAVA_DEFAULT_CLASS_PRESET: ClassPreset<ClassRenderer> = {
   self({ renderer }) {
     return renderer.defaultSelf();
   },
-  property({ property, model, options }) {
-    if (model.options.isExtended) {
-      return '';
+  property({ renderer, propertyName, property, type }) {
+    propertyName = renderer.nameProperty(propertyName, property);
+    let propertyType = renderer.renderType(property);
+    if (type === PropertyType.additionalProperty || type === PropertyType.patternProperties) {
+      propertyType = `Map<String, ${propertyType}>`;
     }
-
-    if (property.property.options.const?.value) {
-      return `private final ${property.property.type} ${property.propertyName} = ${property.property.options.const.value};`;
-    }
-
-    const isDiscriminatorProperty =
-      property.unconstrainedPropertyName ===
-      model.options.discriminator?.discriminator;
-    if (!isDiscriminatorProperty && property.property.originalInput?.default) {
-      return JavaDefaultRendererUtil.renderFieldWithDefault(property);
-    }
-
-    if (
-      options.useModelNameAsConstForDiscriminatorProperty &&
-      isDiscriminatorProperty &&
-      property.property.type === 'String'
-    ) {
-      return `private final ${property.property.type} ${property.propertyName} = "${model.name}";`;
-    }
-
-    return `private ${property.property.type} ${property.propertyName};`;
+    return `private ${propertyType} ${propertyName};`;
   },
-  getter({ property, model, options }) {
-    const getterName = `get${FormatHelpers.toPascalCase(
-      property.propertyName
-    )}`;
-
-    const useOptional =
-      options.useOptionalForNullableProperties &&
-      !property.required &&
-      !property.property.originalInput?.default;
-
-    const returnType = useOptional
-      ? `Optional<${property.property.type}>`
-      : property.property.type;
-
-    const returnValue = useOptional
-      ? `ofNullable(this.${property.propertyName})`
-      : `this.${property.propertyName}`;
-
-    if (model.options.isExtended) {
-      if (isDiscriminatorOrDictionary(model, property)) {
-        return '';
-      }
-
-      return `${returnType} ${getterName}();`;
+  getter({ renderer, propertyName, property, type }) {
+    const formattedPropertyName = renderer.nameProperty(propertyName, property);
+    const getterName = `get${FormatHelpers.toPascalCase(propertyName)}`;
+    let getterType = renderer.renderType(property);
+    if (type === PropertyType.additionalProperty || type === PropertyType.patternProperties) {
+      getterType = `Map<String, ${getterType}>`;
     }
-
-    return `${getOverride(model, property)}public ${returnType} ${getterName}() { return ${returnValue}; }`;
+    return `public ${getterType} ${getterName}() { return this.${formattedPropertyName}; }`;
   },
-  setter({ property, model }) {
-    if (property.property.options.const?.value) {
-      return '';
+  setter({ renderer, propertyName, property, type }) {
+    const formattedPropertyName = renderer.nameProperty(propertyName, property);
+    const setterName = FormatHelpers.toPascalCase(propertyName);
+    let setterType = renderer.renderType(property);
+    if (type === PropertyType.additionalProperty || type === PropertyType.patternProperties) {
+      setterType = `Map<String, ${setterType}>`;
     }
-
-    const setterName = FormatHelpers.toPascalCase(property.propertyName);
-
-    if (model.options.isExtended) {
-      // don't render setters for discriminator, dictionary properties, or enums that are set with a const value
-      if (
-        isDiscriminatorOrDictionary(model, property) ||
-        isEnumImplementedByConstValue(model, property)
-      ) {
-        return '';
-      }
-
-      return `void set${setterName}(${property.property.type} ${property.propertyName});`;
-    }
-
-    if (isDiscriminatorInTree(model, property)) {
-      return '';
-    }
-
-    // don't render override for enums that are set with a const value
-    const override = !isEnumOrEnumInExtended(model, property)
-      ? getOverride(model, property)
-      : '';
-
-    return `${override}public void set${setterName}(${property.property.type} ${property.propertyName}) { this.${property.propertyName} = ${property.propertyName}; }`;
+    return `public void set${setterName}(${setterType} ${formattedPropertyName}) { this.${formattedPropertyName} = ${formattedPropertyName}; }`;
   }
 };
